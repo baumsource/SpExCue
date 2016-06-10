@@ -8,4 +8,5 @@ if not(exist('fftreal','file'))
     SOFAstart
 end
 
-SpExCue_EEGpilot2('RB','screenNumber',0)
+SpExCue_EEGpilot2('RB','M',[1,1/3,0],'responseTrialRatio',.6,'skipFamiliarization',...
+  'screenNumber',0,'TDToff','debugMode')

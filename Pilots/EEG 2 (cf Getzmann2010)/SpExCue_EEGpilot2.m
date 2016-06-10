@@ -109,6 +109,19 @@ else
   subj.ID = ID;
 end
 
+%% Create filename for saving
+fn = fullfile('Results',saveFileNamePrefix);
+if not(exist('Results','dir')) 
+  mkdir('Results')
+end
+if flags.do_monaural
+  fn = [fn '_mon'];
+end
+if kv.responseTrialRatio > 0
+  fn = [fn '_RT'];
+end
+fn = [fn,'_',subj.ID];
+
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
 minmaxChVolt = 1.0;  % min/max voltage for the output channels (scaling)
@@ -255,16 +268,18 @@ end
 % randomizations
 iC = nan(NM*Ndir,kv.Nrep); % index for M-direction combinations
 for irep = 1:kv.Nrep % randomize within blocks
-  iC(:,irep) = randperm(NM*Ndir);
+  iC(:,irep) = randperm(NM*Ndir)+(irep-1)*NM*Ndir;
 end
 for ii = 1:NM*Ndir % randomize across blocks
   iRT(ii,:) = iRT(ii,randperm(kv.Nrep));
 end
 iRT = iRT(iC);
+id_M = id_M(iC);
+id_dirChange = id_dirChange(iC);
 
 % initialize variables
-subj.M = kv.M(id_M(iC)); % M combination
-subj.dirChange = id_dirChange(iC); % M combination
+subj.M = kv.M(id_M); % M combination
+subj.dirChange = id_dirChange; % M combination
 subj.SPL = nan(NM*Ndir,kv.Nrep); % SPL
 subj.resp = nan(NM*Ndir,kv.Nrep); % L/R response: 1...left, -1...right
 subj.RT = nan(NM*Ndir,kv.Nrep); % reaction time
@@ -286,8 +301,8 @@ for irep = 1:kv.Nrep
 
   % Randomized presentation order
   for ii = 1:NM*Ndir
-    idx = iC(ii,irep);
-    sigpair = subj.stim.sig{id_M(idx),id_dirChange(idx)};
+%     idx = iC(ii,irep);
+    sigpair = subj.stim.sig{id_M(ii,irep),id_dirChange(ii,irep)};
     changeTime = 0.7;
     nM2 = changeTime*fs;
     
@@ -419,12 +434,14 @@ for irep = 1:kv.Nrep
     end
     DrawFormattedText(win,infotext,'center','center',white);
     Screen('Flip',win);
+    
+    % Save results
+    save(fn,'subj','kv','flags')
+    
     KbStrokeWait;
   end
   
 end
-
-% calculate performance statistics
 
 %% Inform listener that experiment is completed
 i1 = 'Experiment completed.';
@@ -434,19 +451,5 @@ DrawFormattedText(win,[i1, i2],'center','center',white);
 Screen('Flip',win);
 KbStrokeWait;
 Screen('CloseAll');
-
-%% Save results
-fn = fullfile('Results',saveFileNamePrefix);
-if not(exist('Results','dir')) 
-  mkdir('Results')
-end
-if flags.do_monaural
-  fn = [fn '_mon'];
-end
-if kv.responseTrialRatio > 0
-  fn = [fn '_RT'];
-end
-fn = [fn,'_',subj.ID];
-save(fn,'subj','kv','flags')
 
 end

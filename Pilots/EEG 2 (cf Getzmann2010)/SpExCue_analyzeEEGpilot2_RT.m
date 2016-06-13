@@ -37,7 +37,7 @@ RT = subj.RT(idRespTrial);
 %% Plot
 fig = figure;
 boxplot(RT,M)
-set(gca,'YLim',[0,1])
+set(gca,'YLim',[0,.7],'XTickLabel',{'0','1/3','1'})
 xlabel('Spectral Contrast, M')
 ylabel('Reaction Time (ms)')
 

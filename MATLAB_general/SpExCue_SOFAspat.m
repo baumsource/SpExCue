@@ -99,8 +99,6 @@ end
 % out(:,1)=out(:,1)/peak(1);
 % out(:,2)=out(:,2)/peak(2);
 
-% if exist('converted','var'), azi=sph2nav(azi,ele); end;
-
 %% Output
 % actually used angles
 azi = Obj.SourcePosition(idx,1);

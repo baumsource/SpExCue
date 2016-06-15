@@ -84,6 +84,7 @@ else
 end
 
 trigVals = struct(... 
+  'catch',7,...
   'correctResponse',8,...
   'wrongResponse',9,...
   'left',000,...
@@ -113,7 +114,7 @@ end
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
 minmaxChVolt = 1.0;  % min/max voltage for the output channels (scaling)
-trigDuration = 0.001;  % duration of trigger in seconds
+trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
   myTDT = tdt('playback_2channel', fsVal, minmaxChVolt, trigDuration );
@@ -443,16 +444,27 @@ for bb = 1:Nblocks
     if subj.D(ii) ~= 0
       subj.hit(ii) = subj.E(ii)*subj.D(ii) > 0;
     end
-
+    
+    % DEBUG EDIT from Darrin (June 13, 2016)
     if flags.do_TDTon
-      if subj.hit(ii)
-        send_event(myTDT, trigVals.correctResponse)
-      elseif isnan(subj.hit(ii))
+      if isnan(subj.hit(ii))
         send_event(myTDT, trigVals.catch)
+      elseif subj.hit(ii)
+        send_event(myTDT, trigVals.correctResponse)
       else
         send_event(myTDT, trigVals.wrongResponse)
       end
     end
+    
+%     if flags.do_TDTon
+%       if subj.hit(ii)
+%         send_event(myTDT, trigVals.correctResponse)
+%       elseif isnan(subj.hit(ii))
+%         send_event(myTDT, trigVals.catch)
+%       else
+%         send_event(myTDT, trigVals.wrongResponse)
+%       end
+%     end
 
     % feedback
     if flags.do_TbTfeedback

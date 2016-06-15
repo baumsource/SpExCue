@@ -1,0 +1,6 @@
+External electrodes:
+1/2: mastoid l/r
+3: vertical EOG
+4/5: horizontal EOG (l/r)
+6/7: earlobe (l/r)
+8: nose

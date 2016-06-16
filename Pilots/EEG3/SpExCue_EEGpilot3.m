@@ -113,7 +113,7 @@ end
 
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
-minmaxChVolt = 1.0;  % min/max voltage for the output channels (scaling)
+minmaxChVolt = 2.53;%1.0;  % min/max voltage for the output channels (scaling)
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
@@ -176,7 +176,7 @@ if flags.do_TDTon
 else
   fs = 48.8e3;
 end
-subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs );
+subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
 
 % Monaural?
 if flags.do_monaural

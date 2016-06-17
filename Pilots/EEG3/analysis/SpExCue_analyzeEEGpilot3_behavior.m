@@ -8,7 +8,7 @@ if not(exist('ID','var'))
 end
 
 flags.do_save = true;
-conditions = {'all'};%,0,-90};
+conditions = {'all',90,0,-90};
 Ncond = length(conditions);
 XTickLabel = {'all','left','front','right'};
 

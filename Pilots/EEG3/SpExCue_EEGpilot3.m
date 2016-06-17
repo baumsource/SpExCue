@@ -4,30 +4,32 @@ function SpExCue_EEGpilot3(ID,varargin)
 %on sound externalization 
 %
 % Key-value pairs:
-% azi = [30,0,-30]; % set of azimuths
-% ele = [0,30,0]; % set of elevations
-% M = [1,0.5,0]; % set of spectral saliences
-% Nrep = 3; % repetitions
-% flow = 700; % lower cut-off frequency
-% fhigh = 18000; % upper cut-off frequency
-% dur = 1.5; % duration of stimulus pair in sec
-% fadeDur = 0.05; % duration of fade-in/out in sec
-% jitter = 0.1; % temporal jitter in sec
-% SPL = 70; % SPL in dB
-% SPLrove = 10; % roving of SPL in dB
-% rdepth = 10; % depth (peak-to-peak) in dB of spectral magnitude ripple
-% rdensity = 0.25; % density of spectral magnitude ripple
-% screenNumber = 1; % For 3rd floor lab (when using dual screens) choose #1, otherwise use #0
+% keyvals.fnExtension = ''; % filename extension
+% keyvals.azi = 90;%[30,0,-30]; % set of azimuths
+% keyvals.ele = 0;%[0,30,0]; % set of elevations
+% keyvals.M = [1,1/3,0]; % set of spectral saliences
+% keyvals.Nrep = 120; % repetitions
+% keyvals.flow = 1e3; % lower cut-off frequency
+% keyvals.fhigh = 16e3; % upper cut-off frequency
+% keyvals.dur = 1.2; % duration of stimulus pair in sec
+% keyvals.fadeDur = 0.05; % duration of fade-in/out in sec
+% keyvals.jitter = 0.1; % temporal jitter in sec
+% keyvals.SPL = 70; % SPL in dB
+% keyvals.SPLrove = 0; % roving of SPL in dB
+% keyvals.rdepth = 10; % depth (peak-to-peak) in dB of spectral magnitude ripple
+% keyvals.rdensity = 0.25; % density of spectral magnitude ripple
+% keyvals.screenNumber = 1; % For 3rd floor lab (when using dual screens) choose #1, otherwise use #0
+% keyvals.NperBlock = 20; % trials per block
 %
 % Flags:
-% stimulation = {'binaural','monaural'};
-% roving = {'componentRove','pairRove'};
-% feedback = {'TbTfeedback','blockedFeedback','noFeedback'}; % TbTfeedback:
-% feedback on trial-by-trial basis by changing fixation dot color;
-% blockedFeedback: provide only summary scores after every block
-% tdt = {'TDTon','TDToff'};
-% psychtoolbox = {'','debugMode'}; % to generate a very small (useless) Psychtoolbox window but allow access to Matlab command window while executing script
-% HRTFs = {'HRCeq','HRC3ms','ARI'};
+% flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
+% flags.stimulation = {'binaural','monaural'};
+% flags.Mrepetition = {'repeateM','changeM'};
+% flags.roving = {'componentRove','pairRove'};
+% flags.familiarization = {'familiarize','skipFamiliarization'};
+% flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
+% flags.tdt = {'TDTon','TDToff'};
+% flags.psychtoolbox = {'','debugMode'}; % to generate a very small (useless) Psychtoolbox window but allow access to Matlab command window while executing script
 
 % AUTHOR: Robert Baumgartner
 
@@ -75,13 +77,9 @@ if not(exist('./data','dir'))
 end
 
 %% Internal seetings
-if flags.do_TDTon
-  closerKey = 67; % C key
-  fartherKey = 70; % F key
-else
-  closerKey = 6; % C key
-  fartherKey = 9; % F key
-end
+KbName('UnifyKeyNames');
+closerKey = KbName('c');
+fartherKey = KbName('f');
 
 trigVals = struct(... 
   'catch',7,...
@@ -113,7 +111,7 @@ end
 
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
-minmaxChVolt = 1.0;  % min/max voltage for the output channels (scaling)
+minmaxChVolt = 2.53;%1.0;  % min/max voltage for the output channels (scaling)
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
@@ -176,7 +174,7 @@ if flags.do_TDTon
 else
   fs = 48.8e3;
 end
-subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs );
+subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
 
 % Monaural?
 if flags.do_monaural
@@ -217,16 +215,17 @@ iM = iM(idrandM,:);
 
 % Randomization of positions
 iPos = perms(1:length(kv.azi))'; % all permutations of position orders
-NposPerm = size(iPos,2); % # permutations possible with set of positions
-iPos = iPos(:,randperm(NposPerm)); % randomize across experimental runs
-if kv.Nrep/NposPerm ~= round(kv.Nrep/NposPerm)
-  error(['Number of repetitions must be a multiple of ',num2str(NposPerm),' to assure complete randomization of positions.'])
+NposPermOrder = size(iPos,2); % # order permutations possible with set of positions
+NposPermTotal = numel(iPos); % length of position sequence (min # of blocks)
+iPos = iPos(:,randperm(NposPermOrder)); % randomize across experimental runs
+if kv.Nrep/NposPermTotal ~= round(kv.Nrep/NposPermTotal)
+  error(['Number of repetitions must be a multiple of ',num2str(NposPermTotal),' to assure complete randomization of positions.'])
 end
 
 % Repetitions for various positions
 Nblocks = Ntotal/kv.NperBlock;
 while Nblocks ~= round(Nblocks) || ...
-    Nblocks/NposPerm ~= round(Nblocks/NposPerm)
+    Nblocks/NposPermTotal ~= round(Nblocks/NposPermTotal)
   kv.NperBlock = kv.NperBlock-1;
   Nblocks = Ntotal/kv.NperBlock;
   dispFlag = true; 
@@ -234,13 +233,14 @@ end
 if exist('dispFlag','var')
   disp(['Number of trials per block reduced to ',num2str(kv.NperBlock),'.'])
 end
-idPosRep = reshape(1:NperPos,kv.NperBlock,[]);
-idPosRep = repmat(idPosRep,[Npos,1]);
+% repeat iM sequence within blocks Npos times
+idPosRep = reshape(1:NperPos,kv.NperBlock,[]); % incrementing index arranged in columns (blocks)
+idPosRep = repmat(idPosRep,[Npos,1]); % order within each block is repeated for every position
 iM = iM(idPosRep(:),:);
-iPos = reshape(iPos,1,[]);
-iPos = repmat(iPos,[kv.NperBlock,1]);
+iPos = reshape(iPos,1,[]); % turn permutation matrix to row vector
+iPos = repmat(iPos,[kv.NperBlock,1]); % position constant within block
 iPos = iPos(:);
-iPos = repmat(iPos,[kv.Nrep/NposPerm,1]);
+iPos = repmat(iPos,[Nblocks/NposPermTotal,1]);
 
 % Set values
 subj.Mcomb = kv.M(iM); % M combination
@@ -422,18 +422,18 @@ for bb = 1:Nblocks
                       size(sigpair,1),trigVals.stimulusOffset];
       myTDT.load_stimulus(sigpair, triggerInfo);
       tic;
-      myTDT.play()
+      myTDT.play_blocking()
     else
       tic;
       sound(sigpair,fs)
+      pause(kv.dur)
     end
 
-    % response after stimulus offset
-    pause(kv.dur)
+    % Visual marker at stimulus offset for response request
     Screen('DrawDots',win, [x_center,y_center], 14, blue, [], 2);
     Screen('Flip',win);
 
-    % response via keyboard 
+    % Response via keyboard 
     keyCodeVal = 0;
     while not(keyCodeVal==closerKey || keyCodeVal==fartherKey) % 67...C, 70...F
         [tmp,keyCode] = KbWait([],2);
@@ -445,7 +445,7 @@ for bb = 1:Nblocks
       subj.hit(ii) = subj.E(ii)*subj.D(ii) > 0;
     end
     
-    % DEBUG EDIT from Darrin (June 13, 2016)
+    % Send response evaluation trigger
     if flags.do_TDTon
       if isnan(subj.hit(ii))
         send_event(myTDT, trigVals.catch)
@@ -455,18 +455,8 @@ for bb = 1:Nblocks
         send_event(myTDT, trigVals.wrongResponse)
       end
     end
-    
-%     if flags.do_TDTon
-%       if subj.hit(ii)
-%         send_event(myTDT, trigVals.correctResponse)
-%       elseif isnan(subj.hit(ii))
-%         send_event(myTDT, trigVals.catch)
-%       else
-%         send_event(myTDT, trigVals.wrongResponse)
-%       end
-%     end
 
-    % feedback
+    % Feedback
     if flags.do_TbTfeedback
       if isnan(subj.hit(ii)) || subj.hit(ii) % positive feedback for catch trials
         Screen('DrawDots',win, [x_center,y_center], 14, green, [], 2);
@@ -481,6 +471,7 @@ for bb = 1:Nblocks
     Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
     Screen('Flip',win);
 
+    % ITI jitter
     pause(0.5 + kv.jitter*(rand-0.5))
 
     if flags.do_debugMode
@@ -515,14 +506,9 @@ for bb = 1:Nblocks
   DrawFormattedText(win,infotext,'center','center',white);
   Screen('Flip',win);
   KbStrokeWait;
-%     skipBreak = false;
-%   else
-%     skipBreak = true;
-%   end
   
 end
 
-% calculate performance statistics
 
 %% Inform listener that experiment is completed
 i1 = 'Thank you! The experiment is completed.';

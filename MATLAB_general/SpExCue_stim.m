@@ -136,11 +136,12 @@ stim.fs = kv.fs;
 
 %% Band-pass filtering
 if not(flags.do_IR)
-  if kv.flow <= 100
-    filtOrder = 6;
-  else
-    filtOrder = 9;
-  end
+%   if kv.flow <= 100
+%     filtOrder = 6;
+%   else
+%     filtOrder = 9;
+%   end
+  filtOrder = 4;
   [b_bp,a_bp] = butter(filtOrder,[kv.flow,kv.fhigh]/(kv.fs/2));
   for ii = 1:numel(stim.sig)
     stim.sig{ii} = filter(b_bp,a_bp,stim.sig{ii});

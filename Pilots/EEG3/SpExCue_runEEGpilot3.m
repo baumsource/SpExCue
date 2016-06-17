@@ -12,13 +12,15 @@ SOFAstart
 sca
 
 if not(eegflag)
-    %% behavioral pilot
-    SpExCue_EEGpilot3(ID,'screenNumber',1,'azi',-90:90:90,'Nrep',1*18,...
-      'fnExtension','behav','noFeedback')
+    %% behavioral pilot (3 repetitions for 3 positions take 5 min) 
+    Nrep = 2*6; % 252 trials -> 13 min presentation time -> 20 min with breaks
+    SpExCue_EEGpilot3(ID,'screenNumber',1,'azi',-90:90:90,'Nrep',Nrep,...
+      'fnExtension','behav','noFeedback','halfPosOrderPermutation')
     SpExCue_analyzeEEGpilot3_behavior([ID,'behav'])
 else
-    %% EEG monitored experiment
-    SpExCue_EEGpilot3(ID,'screenNumber',1,'azi',90,'Nrep',...
+    %% EEG monitored experiment 
+    Nrep = 120; % 840 trials -> 42 min presentation time -> 60 min with breaks
+    SpExCue_EEGpilot3(ID,'screenNumber',1,'azi',90,'Nrep',120,...
       'fnExtension','eeg','blockedFeedback')
     SpExCue_analyzeEEGpilot3_behavior([ID,'eeg'])
 end

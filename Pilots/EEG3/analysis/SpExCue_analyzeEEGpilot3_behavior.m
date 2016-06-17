@@ -31,7 +31,7 @@ for jj = 1:length(conditions)
   end
 
 %   % exclude same-M trials
-%   idMdiff = D ~= 0;
+  idMdiff = D ~= 0;
   idx = idCond;% & idMdiff;
   
   % Correlation Analysis
@@ -61,7 +61,7 @@ for jj = 1:length(conditions)
   % Psychometrics
   
   % Psychometric function
-  idselect = idx;
+  idselect = idCond;
   Dset = sort(unique(D(idselect)));
   for dd = 1:length(Dset)
     idx = idselect & D == Dset(dd);
@@ -70,8 +70,9 @@ for jj = 1:length(conditions)
   
   % Sensitivity (hit defined as farther judgment if D > 0)
   pHit = sum(D(idselect)>0 & E(idselect)>0) / sum(D(idselect)>0);
-  zHit = norminv(pHit-eps,0,1);
   pFalseAlarm = sum(D(idselect)<0 & E(idselect)>0) / sum(D(idselect)<0);
+  pCorrect(jj,1) = nansum(subj.hit(idselect)) / sum(not(isnan(subj.hit(idselect))));
+  zHit = norminv(pHit-eps,0,1);
   zFalseAlarm = norminv(pFalseAlarm+eps,0,1);
   dprime(jj,1) = zHit - zFalseAlarm;
   
@@ -107,14 +108,14 @@ if Ncond > 1
   hSingle = plot(Dset,pFarther(:,2:end));
 end
 set(hAll,'LineWidth',2)
-set(gca,'XTick',Dset)
-xlabel('M_{change} - M_{onset}')
+set(gca,'XTick',Dset,'XTickLabel',{'-1','-2/3','-1/3','0','1/3','2/3','1'})
+xlabel('D = M_{change} - M_{onset}')
 ylabel('% ´farther´ judgments')
 legend(XTickLabel,'Location','northwest')
 
 % Tables
 Ncond = length(conditions);
-tab_dprime_bias = table(dprime,bias,'RowNames',XTickLabel(1:Ncond));
+tab_dprime_bias = table(dprime,bias,pCorrect,'RowNames',XTickLabel(1:Ncond));
 disp(tab_dprime_bias)
 
 [dprime_Mcomb_sort,id_sort] = sort(dprime_Mcomb);

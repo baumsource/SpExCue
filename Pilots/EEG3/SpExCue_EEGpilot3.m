@@ -25,6 +25,7 @@ function SpExCue_EEGpilot3(ID,varargin)
 % flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
 % flags.stimulation = {'binaural','monaural'};
 % flags.Mrepetition = {'repeateM','changeM'};
+% flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 % flags.roving = {'componentRove','pairRove'};
 % flags.familiarization = {'familiarize','skipFamiliarization'};
 % flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
@@ -51,10 +52,11 @@ definput.keyvals.SPLrove = 0; % roving of SPL in dB
 definput.keyvals.rdepth = 10; % depth (peak-to-peak) in dB of spectral magnitude ripple
 definput.keyvals.rdensity = 0.25; % density of spectral magnitude ripple
 definput.keyvals.screenNumber = 1; % For 3rd floor lab (when using dual screens) choose #1, otherwise use #0
-definput.keyvals.NperBlock = 20; % trials per block
+definput.keyvals.NperBlock = 21; % trials per block
 definput.flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
 definput.flags.stimulation = {'binaural','monaural'};
 definput.flags.Mrepetition = {'repeateM','changeM'};
+definput.flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 definput.flags.roving = {'componentRove','pairRove'};
 definput.flags.familiarization = {'familiarize','skipFamiliarization'};
 definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
@@ -216,10 +218,14 @@ iM = iM(idrandM,:);
 % Randomization of positions
 iPos = perms(1:length(kv.azi))'; % all permutations of position orders
 NposPermOrder = size(iPos,2); % # order permutations possible with set of positions
-NposPermTotal = numel(iPos); % length of position sequence (min # of blocks)
 iPos = iPos(:,randperm(NposPermOrder)); % randomize across experimental runs
-if kv.Nrep/NposPermTotal ~= round(kv.Nrep/NposPermTotal)
-  error(['Number of repetitions must be a multiple of ',num2str(NposPermTotal),' to assure complete randomization of positions.'])
+if flags.do_halfPosOrderPermutation
+  NposPermOrder = NposPermOrder/2;
+  iPos = iPos(:,1:NposPermOrder);
+end
+NposPermTotal = numel(iPos); % length of position sequence (min # of blocks)
+if kv.Nrep/NposPermOrder ~= round(kv.Nrep/NposPermOrder)
+  error(['Number of repetitions must be a multiple of ',num2str(NposPermOrder),' to assure complete randomization of positions.'])
 end
 
 % Repetitions for various positions

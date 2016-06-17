@@ -11,7 +11,7 @@ ID = 'RB'; % RS2
 
 % behavioral pilot
 SpExCue_EEGpilot3(ID,'screenNumber',0,'azi',-90:90:90,'Nrep',12,...
-  'fnExtension','','TDToff','TbTfeedback','debugMode','skipFamiliarization')
+  'fnExtension','checkDistortion','TDToff','debugMode','skipFamiliarization')
 
 % EEG
 % SpExCue_EEGpilot(ID,'screenNumber',1,'azi',-90)

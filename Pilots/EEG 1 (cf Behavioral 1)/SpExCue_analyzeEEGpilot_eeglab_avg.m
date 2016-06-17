@@ -1,7 +1,7 @@
 function SpExCue_analyzeEEGpilot_eeglab_avg(IDs)
 % Analyze SpExCue_EEGpilot
 
-flags.do_print = true;
+flags.do_print = false;
 
 timeflag = {...
   'Combinations';...
@@ -20,6 +20,7 @@ flags.contralaterality = {...
 %   'rightHemiDominance';... % Getzmann & Lewald (2010)
 %   'intrahemiContralaterality';... % Palomäki et al. (2005)
   };
+flags.do_TFanalysis = true;
 
 %% 
 
@@ -173,8 +174,38 @@ switch flags.contralaterality{end}
     N1RHdom = N1RH - N1LH; % right-hemispheric dominance
     P2RHdom = P2RH - P2LH; % right-hemispheric dominance
   otherwise
+    
+    if flags.do_TFanalysis
+      % Downsampling parameters
+      fsLow = 40;
+      fsDiv = gcd(fsLow,EEG.srate);
+      P = fsLow/fsDiv;
+      Q = EEG.srate/fsDiv;
+      % DGT parameters
+      WinFunct={'gauss',1,'2'}; % Gaussian window with time-freq ratio of 1 and normalized L2 norm
+      DownSampFact=1; % Downsampling factor in time
+      NumChan=40; % Total number of channels, only 101 will be computed
+      ersp = nan(12,200,length(MLabel),length(IDs));
+    end
+    
     for ii = 1:length(MLabel)
+      
+      % T-F characteristics
+      if flags.do_TFanalysis
+        eval(['ERPs = squeeze(EEG_',MLabel{ii},'.data(chNum,:,:));'])
+        [ersp(:,:,ii,ll),itc,powbase,times,freqs,erspboot,itcboot] = newtimef(...
+          ERPs,EEG_M0_1.pnts,[EEG_M0_1.xmin,EEG_M0_1.xmax]*1000, EEG.srate); % 'freqs',[1,20]
+        
+%         % Downsampling
+%         ERPs_fsLow = resample(double(ERPs),P,Q);
+%         % DGT
+%         PSD = db(abs(dgtreal(ERPs_fsLow,WinFunct,DownSampFact,NumChan)));
+%         eval(['PSD_',MLabel{ii},'(:,:,ll) = mean(PSD,3);'])
+      end
+      
+      % Across-trial average of ERPs
       eval(['populationMean',MLabel{ii},'(:,ll) = squeeze(mean(EEG_',MLabel{ii},'.data(chNum,:,:),3));']);
+      % ERP component amplitudes
       time = epochStart:1/EEG.srate:epochEnd-1/EEG.srate;
       idTimeN1 = time>=N1latency(1) & time<=N1latency(2);
       idTimeP2 = time>=P2latency(1) & time<=P2latency(2);
@@ -196,6 +227,9 @@ switch flags.contralaterality{end}
   otherwise
     for ii = 1:length(MLabel)
       eval(['populationMean',MLabel{ii},' = mean(populationMean',MLabel{ii},',2);']);
+      if flags.do_TFanalysis
+        ersp = mean(ersp,4);
+      end
     end
     N1amp = mean(N1amp,3);
     P2amp = mean(P2amp,3);
@@ -206,6 +240,7 @@ end
 
 switch flags.contralaterality{end}
   case 'off' % mean epoch
+    
     fig(1) = figure;
     t = 1000*(epochStart:1/EEG.srate:epochEnd-1/EEG.srate);
     plot([0,0],[-10,10],'k:')
@@ -226,6 +261,23 @@ switch flags.contralaterality{end}
     title([timeflag{tt},', listener: ',ID])
     set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel)
     ylabel('Amplitude ({\mu}V)')
+    
+    if flags.do_TFanalysis
+      fig(3) = figure;
+      for ff = 1:4
+        subplot(2,2,ff)
+        plot(times,squeeze(ersp(ff,:,:)))
+        title([num2str(freqs(ff)),' Hz'])
+        legend(MlegendLabel)
+      end
+%       dynrange = 20;
+%       for ii = 1:length(MLabel)
+%         subplot(2,3,ii)
+%         eval(['plotdgtreal(PSD_',MLabel{ii},',DownSampFact,NumChan,fsLow,dynrange);']);
+%         set(gca,'XTickLabel',get(gca,'XTick')+baselineCorrectInterval(1)/1e3)
+%         title(MlegendLabel{ii})
+%       end
+    end
     
   case 'rightHemiDominance'
     fig = figure;
@@ -289,8 +341,13 @@ if flags.do_print && exist('fig','var')
   end
   fn = [fn,'_',flags.position{pp}];
   print(fig(1),Resolution,'-dpng',fn)
-  if length(fig) == 2
+  if length(fig) > 1
     fn2 = [fn,'_compMeasures'];
     print(fig(2),Resolution,'-dpng',fn2)
+  end
+  if length(fig) > 2
+    fn3 = [fn,'_sgram'];
+    set(fig(3),'PaperUnits','centimeters','PaperPosition',[100,100,16,10])
+    print(fig(3),Resolution,'-dpng',fn3)
   end
 end

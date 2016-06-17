@@ -6,7 +6,7 @@ azi = repmat(1:360,[1,length(ele)]);
 ele = repmat(ele,[360,1]); 
 ele=ele(:);
 
-Obj = SOFAload('VB_hrtf B.sofa');
+Obj = SOFAload('../HRTFs/VB_hrtf B.sofa');
 
 sig = noise(10*Obj.Data.SamplingRate,1,'white');
 [out,A,E] = SOFAspat(sig,Obj,azi,ele); out = setdbspl(out,80);

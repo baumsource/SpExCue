@@ -25,7 +25,7 @@ flags.contralaterality = {...
 %   'rightHemiDominance';... % Getzmann & Lewald (2010)
 %   'intrahemiContralaterality';... % Palomäki et al. (2005)
   };
-flags.do_TFanalysis = false;
+flags.do_TFanalysis = true;
 
 %% 
 
@@ -41,9 +41,13 @@ if not(exist('pop_loadset','file'))
 end
 
 %% Settings
-
-epochStart = -.2;  % seconds before the trigger event
-epochEnd = .8; % seconds after the trigger event
+if flags.do_TFanalysis
+  epochStart = -.6;  % seconds before the trigger event
+  epochEnd = 1.6; % seconds after the trigger event
+else
+  epochStart = -.2;  % seconds before the trigger event
+  epochEnd = .6; % seconds after the trigger event
+end
 
 baselineCorrectInterval = [-200 0];
 ERPfhigh = 20; % cut-off frequency of low-pass filter for ERPs
@@ -56,6 +60,16 @@ maxslope = 5; % max slope in µV/epoch
 N1latency = [.120,.220]; % seconds
 P2latency = [.220,.300]; % seconds
 P3latency = [.300,.600]; % seconds
+
+% Frequency bands for T-F-Analysis
+freqBand(1).name = 'delta';
+freqBand(1).range = [2,4]; % Hz
+freqBand(2).name = 'theta';
+freqBand(2).range = [4,8]; % Hz
+freqBand(3).name = 'alpha';
+freqBand(3).range = [8,12]; % Hz
+freqBand(4).name = 'beta';
+freqBand(4).range = [15,30]; % Hz
 
 M = [1,1/3,0];
 MLabel = {'M1','Mp3','M0'};
@@ -218,39 +232,45 @@ for ll = 1:length(IDs)
             ERSP = [];%nan(12,200,length(MLabel),length(IDs));
             eval(['tmpEEG = EEG_',MLabel{1},';'])
             for ii = 1:length(MLabel)
-              eval(['ERPs = squeeze(EEG_',MLabel{ii},'.data(chNum,:,:));'])
-      %         figure
-              [ERSP(:,:,ii,ll),itc,powbase,ERSPtimes,ERSPfreqs,erspboot,itcboot] = newtimef(...
-                ERPs,tmpEEG.pnts,[tmpEEG.xmin,tmpEEG.xmax]*1000,tmpEEG.srate,0,...
-                'freqs',[0.5,25],'plotersp','off','plotitc','off');
+              eval(['tmpEEG = EEG_',MLabel{ii},';'])
+%               figure
+              [ERSP(:,:,ii,ll),itc,powbase,ERSPtimes,ERSPfreqs] = pop_newtimef(...
+                tmpEEG, 1, chNum,[tmpEEG.xmin,tmpEEG.xmax]*1000,0,...
+                'freqs',[0,20],'alpha',.05,'plotitc','off','plotersp','off'); % 
+%               pop_newtimef(EEG_Dm1, 1, chNum,[tmpEEG.xmin,tmpEEG.xmax]*1000,1);
+%               eval(['ERPs = squeeze(EEG_',MLabel{ii},'.data(chNum,:,:));'])
+%               figure
+%               [ERSP(:,:,ii,ll),itc,powbase,ERSPtimes,ERSPfreqs,erspboot,itcboot] = newtimef(...
+%                 ERPs,tmpEEG.pnts,[tmpEEG.xmin,tmpEEG.xmax]*1000,tmpEEG.srate,0,...
+%                 'freqs',[0,20],'plotitc','off');%,'plotersp','off'
+            end
+          else
+
+            for ii = 1:length(MLabel)
+              % Low-pass filter and baseline-correct the data again
+              transitionBandwidth = 1;  % In Hz
+              maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
+              KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
+              filtOrder = pop_firwsord('kaiser', EEG.srate, transitionBandwidth, maxPassbandRipple);
+              eval(['tmpEEG = EEG_',MLabel{ii},';'])
+              tmpEEG = pop_firws(tmpEEG, 'fcutoff', ERPfhigh, 'ftype', 'lowpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
+              tmpEEG = pop_rmbase(tmpEEG, baselineCorrectInterval);
+              eval(['EEG_',MLabel{ii},' = tmpEEG;'])
+
+              % Across-trial average of ERPs
+              Ntrials(ii) = size(tmpEEG.data,3);
+              eval(['populationMean',MLabel{ii},'(:,ll) = squeeze(mean(EEG_',MLabel{ii},'.data(chNum,:,:),3));']);
+
+              % ERP component amplitudes
+              time = epochStart:1/EEG.srate:epochEnd-1/EEG.srate;
+              idTimeN1 = time>=N1latency(1) & time<=N1latency(2);
+              idTimeP2 = time>=P2latency(1) & time<=P2latency(2);
+              idTimeP3 = time>=P3latency(1) & time<=P3latency(2);
+              eval(['N1amp(pp,ii,ll) = min(populationMean',MLabel{ii},'(idTimeN1,ll),[],1);'])
+              eval(['P2amp(pp,ii,ll) = max(populationMean',MLabel{ii},'(idTimeP2,ll),[],1);'])
+              eval(['P3amp(pp,ii,ll) = max(populationMean',MLabel{ii},'(idTimeP3,ll),[],1);'])
             end
           end
-
-          for ii = 1:length(MLabel)
-            % Low-pass filter and baseline-correct the data again
-            transitionBandwidth = 1;  % In Hz
-            maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
-            KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
-            filtOrder = pop_firwsord('kaiser', EEG.srate, transitionBandwidth, maxPassbandRipple);
-            eval(['tmpEEG = EEG_',MLabel{ii},';'])
-            tmpEEG = pop_firws(tmpEEG, 'fcutoff', ERPfhigh, 'ftype', 'lowpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
-            tmpEEG = pop_rmbase(tmpEEG, baselineCorrectInterval);
-            eval(['EEG_',MLabel{ii},' = tmpEEG;'])
-
-            % Across-trial average of ERPs
-            Ntrials(ii) = size(tmpEEG.data,3);
-            eval(['populationMean',MLabel{ii},'(:,ll) = squeeze(mean(EEG_',MLabel{ii},'.data(chNum,:,:),3));']);
-
-            % ERP component amplitudes
-            time = epochStart:1/EEG.srate:epochEnd-1/EEG.srate;
-            idTimeN1 = time>=N1latency(1) & time<=N1latency(2);
-            idTimeP2 = time>=P2latency(1) & time<=P2latency(2);
-            idTimeP3 = time>=P3latency(1) & time<=P3latency(2);
-            eval(['N1amp(pp,ii,ll) = min(populationMean',MLabel{ii},'(idTimeN1,ll),[],1);'])
-            eval(['P2amp(pp,ii,ll) = max(populationMean',MLabel{ii},'(idTimeP2,ll),[],1);'])
-            eval(['P3amp(pp,ii,ll) = max(populationMean',MLabel{ii},'(idTimeP3,ll),[],1);'])
-          end
-          
       end
     end
   end
@@ -261,65 +281,74 @@ switch flags.contralaterality{end}
   case 'ipsiVsContra'
   case {'rightHemiDominance','intrahemiContralaterality'}
   otherwise
-    for ii = 1:length(MLabel)
-      eval(['populationMean',MLabel{ii},' = mean(populationMean',MLabel{ii},',2);']);
-      if flags.do_TFanalysis
+    
+    if flags.do_TFanalysis
         ERSP = mean(ERSP,4);
+    else
+      for ii = 1:length(MLabel)
+        eval(['populationMean',MLabel{ii},' = mean(populationMean',MLabel{ii},',2);']);
       end
+      N1amp = mean(N1amp,3);
+      P2amp = mean(P2amp,3);
+      P3amp = mean(P3amp,3);
     end
-    N1amp = mean(N1amp,3);
-    P2amp = mean(P2amp,3);
-    P3amp = mean(P3amp,3);
+    
 end
 
 %% Plots
 
 switch flags.contralaterality{end}
+  
   case 'off' % mean epoch
     
-    fig(1) = figure;
-    t = 1000*(epochStart:1/EEG.srate:epochEnd-1/EEG.srate);
-    plot([0,0],[-10,10],'k:')
-    hold on
-    for ii = 1:length(MLabel)
-      eval(['h(ii) = plot(t,populationMean',MLabel{ii},');']);
-      set(h(ii),'LineStyle',LineStyle{ii});
-    end
-    set(gca,'XMinorTick','on','XLim',1000*[epochStart,epochEnd],'YLim',5.9*[-1,1])
-    title(['Listener: ',ID,'; Site: ',site{1}])
-    xlabel('Time (ms)')
-    ylabel('Amplitude ({\mu}V)')
-%     legend(h,MlegendLabel)
-    % legend also with # of averaged trials
-    MlegendLabelNtrials = MlegendLabel;
-    for ii = 1:length(MLabel)
-      MlegendLabelNtrials{ii} = [MlegendLabel{ii},' (',num2str(Ntrials(ii)),' epochs)'];
-    end
-    legend(h,MlegendLabelNtrials)
-    
-    fig(2) = figure;
-    plot([N1amp(pp,:);P2amp(pp,:);P2amp(pp,:)-N1amp(pp,:);P3amp(pp,:)]')
-    legend('N1','P2','P2-N1','P3')
-    title([timeflag{tt},', listener: ',ID])
-    set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel)
-    ylabel('Amplitude ({\mu}V)')
-    
     if flags.do_TFanalysis
-      fig(3) = figure;
-      for ff = 1:length(ERSPfreqs)
-        subplot(2,round(length(ERSPfreqs)/2),ff)
+      
+      fig(1) = figure;
+      for ff = 1:length(freqBand)
+        subplot(1,length(freqBand),ff)
+        idf = ERSPfreqs >= freqBand(ff).range(1) & ERSPfreqs <= freqBand(ff).range(2);
         plot([0,0],[-10,10],'k:')
         hold on
         for iD = 1:length(MLabel)
-          hERSP(iD) = plot(ERSPtimes,squeeze(ERSP(ff,:,iD)));
+          hERSP(iD) = plot(ERSPtimes,squeeze(mean(ERSP(idf,:,iD))));
           set(hERSP(iD),'LineStyle',LineStyle{iD});
         end
         xlabel('Time (ms)')
         ylabel('ERSP power (dB)')
-        axis([1000*[epochStart,epochEnd],1.5*[-1,1]])
-        title([num2str(ERSPfreqs(ff)),' Hz'])
+        axis([1000*[-.200,.600],2.5*[-1,1]])
+        title([freqBand(ff).name,' (',num2str(freqBand(ff).range(1)),'-',...
+          num2str(freqBand(ff).range(2)),' Hz)'])
       end
-      legend(MlegendLabel)
+      legend(hERSP,MlegendLabel)
+      
+    else
+      
+      fig(1) = figure;
+      t = 1000*(epochStart:1/EEG.srate:epochEnd-1/EEG.srate);
+      plot([0,0],[-10,10],'k:')
+      hold on
+      for ii = 1:length(MLabel)
+        eval(['h(ii) = plot(t,populationMean',MLabel{ii},');']);
+        set(h(ii),'LineStyle',LineStyle{ii});
+      end
+      set(gca,'XMinorTick','on','XLim',1000*[epochStart,epochEnd],'YLim',5.9*[-1,1])
+      title(['Listener: ',ID,'; Site: ',site{1}])
+      xlabel('Time (ms)')
+      ylabel('Amplitude ({\mu}V)')
+  %     legend(h,MlegendLabel)
+      % legend also with # of averaged trials
+      MlegendLabelNtrials = MlegendLabel;
+      for ii = 1:length(MLabel)
+        MlegendLabelNtrials{ii} = [MlegendLabel{ii},' (',num2str(Ntrials(ii)),' epochs)'];
+      end
+      legend(h,MlegendLabelNtrials)
+
+      fig(2) = figure;
+      plot([N1amp(pp,:);P2amp(pp,:);P2amp(pp,:)-N1amp(pp,:);P3amp(pp,:)]')
+      legend('N1','P2','P2-N1','P3')
+      title([timeflag{tt},', listener: ',ID])
+      set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel)
+      ylabel('Amplitude ({\mu}V)')
     end
     
   case 'rightHemiDominance'
@@ -374,6 +403,8 @@ if flags.do_print && exist('fig','var')
   Resolution = '-r600';
   set(findall(fig,'-property','FontSize'),'FontSize',FontSize)
   set(fig,'PaperUnits','centimeters','PaperPosition',[100,100,12,8])
+  
+  % common filename
   fn = fullfile('.',mfilename);
   if not(exist(fn,'dir'))
     mkdir(fn)
@@ -383,14 +414,18 @@ if flags.do_print && exist('fig','var')
     fn = [fn,'_' flags.contralaterality{end}];
   end
   fn = [fn,'_',flags.position{pp}];
-  print(fig(1),Resolution,'-dpng',fn)
-  if length(fig) > 1
-    fn2 = [fn,'_compMeasures'];
-    print(fig(2),Resolution,'-dpng',fn2)
+  
+  % individual filename 
+  if flags.do_TFanalysis
+    fn1 = [fn,'_TF'];
+    set(fig(1),'PaperUnits','centimeters','PaperPosition',[100,100,20,10])
+    print(fig(1),Resolution,'-dpng',fn1)
+  else
+    fn1 = [fn,'_ERP'];
+    print(fig(1),Resolution,'-dpng',fn1)
   end
-  if length(fig) > 2
-    fn3 = [fn,'_sgram'];
-    set(fig(3),'PaperUnits','centimeters','PaperPosition',[100,100,16,10])
-    print(fig(3),Resolution,'-dpng',fn3)
+  if length(fig) > 1
+    fn2 = [fn,'_ERPcompMeasures'];
+    print(fig(2),Resolution,'-dpng',fn2)
   end
 end

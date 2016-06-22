@@ -5,8 +5,8 @@ flags.do_print = true;
 
 site = {...
 %   'frontal';...
-  'central';...
-%   'parietal';...
+%   'central';...
+  'parietal';...
   };
 timeflag = {...
   'Combinations';...
@@ -14,10 +14,10 @@ timeflag = {...
 %   'Change';...
   };
 flags.position = {...
-  'left';...
+%   'left';...
 %   'right';...
 %   'top';...
-%   'all';...
+  'all';...
   };
 flags.contralaterality = {...
   'off';...
@@ -25,7 +25,7 @@ flags.contralaterality = {...
 %   'rightHemiDominance';... % Getzmann & Lewald (2010)
 %   'intrahemiContralaterality';... % Palomäki et al. (2005)
   };
-flags.do_TFanalysis = true;
+flags.do_TFanalysis = false;
 
 %% 
 
@@ -50,7 +50,7 @@ else
 end
 
 baselineCorrectInterval = [-200 0];
-ERPfhigh = 20; % cut-off frequency of low-pass filter for ERPs
+ERPfhigh = 50; % cut-off frequency of low-pass filter for ERPs
 
 % Settings for automatic epoch rejection
 epochThresh = 75; % threshold in µV within entire epoch
@@ -74,6 +74,7 @@ freqBand(4).range = [15,30]; % Hz
 M = [1,1/3,0];
 MLabel = {'M1','Mp3','M0'};
 LineStyle = {'-','-.',':'};
+Color = 0.7*colormap(hsv(4));
 
 dirSupp = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/MATLAB_general/';  % directory with required analysis functions, e.g. 'eeglabTrig2dkrTrigID.m' 
 addpath(dirSupp);
@@ -153,6 +154,8 @@ for ll = 1:length(IDs)
           MLabel = {'Dm1','Dmp7','Dmp3','D0','Dp3','Dp7','D1'};
           MlegendLabel = {'D =-1   ','D =-2/3','D =-1/3','D = 0   ','D = 1/3','D = 2/3','D = 1   '};
           LineStyle = {'-','-','-',':','-.','-.','-.'};
+           
+          Color = cat(1,Color(1:4,:),flipud(Color(1:3,:)));
           MTrig = {31,32,21,[11,22,33],12,23,13};
           for ii = 1:length(MTrig)
             idx = mod(eventList,100) == MTrig{ii}(1);
@@ -236,7 +239,8 @@ for ll = 1:length(IDs)
 %               figure
               [ERSP(:,:,ii,ll),itc,powbase,ERSPtimes,ERSPfreqs] = pop_newtimef(...
                 tmpEEG, 1, chNum,[tmpEEG.xmin,tmpEEG.xmax]*1000,0,...
-                'freqs',[0,20],'alpha',.05,'plotitc','off','plotersp','off'); % 
+                'freqs',[0,20],'alpha',.05,'plotitc','on','plotersp','on'); % 
+              figure
 %               pop_newtimef(EEG_Dm1, 1, chNum,[tmpEEG.xmin,tmpEEG.xmax]*1000,1);
 %               eval(['ERPs = squeeze(EEG_',MLabel{ii},'.data(chNum,:,:));'])
 %               figure
@@ -258,7 +262,7 @@ for ll = 1:length(IDs)
               eval(['EEG_',MLabel{ii},' = tmpEEG;'])
 
               % Across-trial average of ERPs
-              Ntrials(ii) = size(tmpEEG.data,3);
+              Ntrials(ii,ll) = size(tmpEEG.data,3);
               eval(['populationMean',MLabel{ii},'(:,ll) = squeeze(mean(EEG_',MLabel{ii},'.data(chNum,:,:),3));']);
 
               % ERP component amplitudes
@@ -291,6 +295,7 @@ switch flags.contralaterality{end}
       N1amp = mean(N1amp,3);
       P2amp = mean(P2amp,3);
       P3amp = mean(P3amp,3);
+      Ntrials = sum(Ntrials,2);
     end
     
 end
@@ -305,13 +310,13 @@ switch flags.contralaterality{end}
       
       fig(1) = figure;
       for ff = 1:length(freqBand)
-        subplot(1,length(freqBand),ff)
+        subplot(1,length(freqBand)+1,ff)
         idf = ERSPfreqs >= freqBand(ff).range(1) & ERSPfreqs <= freqBand(ff).range(2);
         plot([0,0],[-10,10],'k:')
         hold on
         for iD = 1:length(MLabel)
           hERSP(iD) = plot(ERSPtimes,squeeze(mean(ERSP(idf,:,iD))));
-          set(hERSP(iD),'LineStyle',LineStyle{iD});
+          set(hERSP(iD),'LineStyle',LineStyle{iD},'Color',Color(iD,:));
         end
         xlabel('Time (ms)')
         ylabel('ERSP power (dB)')
@@ -319,7 +324,7 @@ switch flags.contralaterality{end}
         title([freqBand(ff).name,' (',num2str(freqBand(ff).range(1)),'-',...
           num2str(freqBand(ff).range(2)),' Hz)'])
       end
-      legend(hERSP,MlegendLabel)
+      legend(hERSP,MlegendLabel,'Location','eastoutside')
       
     else
       
@@ -329,10 +334,14 @@ switch flags.contralaterality{end}
       hold on
       for ii = 1:length(MLabel)
         eval(['h(ii) = plot(t,populationMean',MLabel{ii},');']);
-        set(h(ii),'LineStyle',LineStyle{ii});
+        set(h(ii),'LineStyle',LineStyle{ii},'Color',Color(ii,:));
       end
       set(gca,'XMinorTick','on','XLim',1000*[epochStart,epochEnd],'YLim',5.9*[-1,1])
-      title(['Listener: ',ID,'; Site: ',site{1}])
+      if length(IDs) == 1
+        title(['Listener: ',ID,'; Site: ',site{1}])
+      else
+        title(['Site: ',site{1}])
+      end
       xlabel('Time (ms)')
       ylabel('Amplitude ({\mu}V)')
   %     legend(h,MlegendLabel)
@@ -341,14 +350,22 @@ switch flags.contralaterality{end}
       for ii = 1:length(MLabel)
         MlegendLabelNtrials{ii} = [MlegendLabel{ii},' (',num2str(Ntrials(ii)),' epochs)'];
       end
-      legend(h,MlegendLabelNtrials)
+      legend(h,MlegendLabelNtrials,'Location','eastoutside')
 
       fig(2) = figure;
       plot([N1amp(pp,:);P2amp(pp,:);P2amp(pp,:)-N1amp(pp,:);P3amp(pp,:)]')
-      legend('N1','P2','P2-N1','P3')
-      title([timeflag{tt},', listener: ',ID])
-      set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel)
+      legend('N1','P2','P2-N1','P3','Location','eastoutside')
+      if length(IDs) == 1
+        title(['Listener: ',ID,'; Site: ',site{1}])
+      else
+        title(['Site: ',site{1}])
+      end
+      set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel,'YLim',[-6,8])
       ylabel('Amplitude ({\mu}V)')
+      if strcmp(timeflag{1},'Combinations')
+        xlabel('D = M_{change} - M_{onset}')
+        set(gca,'XTickLabel',{'-1','-2/3','-1/3','0','1/3','2/3','1'})
+      end
     end
     
   case 'rightHemiDominance'
@@ -391,7 +408,7 @@ switch flags.contralaterality{end}
           XTickLabel = strrep(XTickLabel,' ','');
           set(gca,'XTick',1:length(MLabel),'XTickLabel',XTickLabel,'XLim',[.8,length(MLabel)+.2])
       end
-      legend(h,'Right hemisphere','Left hemisphere','Location','northwest')
+      legend(h,'Right hemisphere','Left hemisphere','Location','westoutside')
       ylabel('N1 amplitude difference (\muV)')
       title('Contra- vs. ipsilateral stimulation')
     end
@@ -406,6 +423,9 @@ if flags.do_print && exist('fig','var')
   
   % common filename
   fn = fullfile('.',mfilename);
+  if length(IDs) == 1
+    fn = fullfile(fn,IDs{1});
+  end
   if not(exist(fn,'dir'))
     mkdir(fn)
   end

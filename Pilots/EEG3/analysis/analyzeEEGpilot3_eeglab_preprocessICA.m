@@ -66,6 +66,11 @@
 
 function [paramsOut] = analyzeEEGpilot3_eeglab_preprocessICA(subjID, expDate, condString, varargin)
 
+if not(exist('subjID','var'))
+  subjID = input('Subject ID: ','s');
+end
+  
+
 % Primary path definitions required for this analysis
 dirBDF = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Pilots/EEG3/data/';%string with the filename
 dirLOCS = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/';
@@ -121,11 +126,15 @@ end
 
 
 experimentString = 'SpExCue_EEGpilot3';  % String to label experiment number for the saved eeglab dataset files
-referenceChannels = [33 34]; % Indicies of reference channels in BDF file
-nChansLocsFilename = 'biosemi_eloc.locs';  % filename of the eeglab locations file
+refChanNum = 32+[6,7];%[33 34]; % Indicies of reference channels in BDF file -> apply changes also to s
+refChanLabel = 'A1 A2';%'TP9 TP10'; % Labels of reference channels
+nChansLocsFilename = 'biosemi_eloc_32_TPs_EOGs_As.locs';  % filename of the eeglab locations file
 
 %**************************************************************************
 % Open EEGlab
+if not(exist('eeglab','file'))
+  addpath('/Users/rbaumgartner/Documents/MATLAB/eeglab')
+end
 [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
 
 %--------------------------------------------------------------------------
@@ -133,14 +142,15 @@ nChansLocsFilename = 'biosemi_eloc.locs';  % filename of the eeglab locations fi
 bdfFilepath = dirBDF;%[dirBDF, 'subj', subjID, '/'];  % NOTE: this path is VERY SPECIFIC TO THE USAGE
 bdfFilename = [experimentString,'_',subjID];%['dkr_', experimentString, '_subj', subjID, '_', expDate, '_detect', condString, '.bdf'];  % NOTE: this filename is VERY SPECIFIC TO THE USAGE
 fn = [bdfFilepath, bdfFilename];
-EEG = pop_biosig([fn,'.bdf'], 'ref',referenceChannels ,'refoptions',{'keepref' 'off'});
+EEG = pop_biosig([fn,'.bdf'], 'ref',refChanNum ,'refoptions',{'keepref' 'off'});
 [ALLEEG, EEG, ~] = pop_newset(ALLEEG, EEG, 0,'gui','off'); 
 EEG = eeg_checkset(EEG);
 
 %--------------------------------------------------------------------------
 % Remove unused channels
-EEG = pop_select(EEG,'nochannel',{'EXG4', 'EXG5' 'EXG6' 'EXG7' 'EXG8'}); % adjust for RS !!!!
-EEG = pop_chanedit(EEG, 'load',{[dirLOCS, nChansLocsFilename] 'filetype' 'autodetect'});  % Set channel locations
+EEG = pop_select(EEG,'nochannel',{'EXG8'});
+EEG = pop_chanedit(EEG, 'load',{[dirLOCS, nChansLocsFilename] 'filetype' 'autodetect'},...  % Set channel locations
+  'setref',{[num2str(refChanNum(1)),' ',num2str(refChanNum(2))] refChanLabel});             % and define reference channels
 [ALLEEG, EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
 EEG = eeg_checkset(EEG);
 [ALLEEG, EEG, ~] = pop_newset(ALLEEG, EEG, 1,'savenew',[fn,'_raw'],'gui','off'); 
@@ -172,11 +182,14 @@ fn = [fn,'_ICAraw'];
 EEG = pop_saveset(EEG,  'filename', fn);%, 'filepath', bdfFilepath);
 
 
+%--------------------------------------------------------------------------
+% Reject components by map
+% pop_selectcomps(EEG, [1:35] );
+% [ALLEEG EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
 % EEG = eeg_checkset( EEG );
-% [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 1,'overwrite','on','gui','off'); 
-% EEG = eeg_checkset( EEG );
-% [ALLEEG, EEG, CURRENTSET] = pop_newset(ALLEEG, EEG, 3,'savenew',[bdfFilepath, experimentString 'subj', subjID, '_detect', condString, '_resamp', num2str(FS), 'filt', num2str(hicutoff),'_ICAraw'],'gui','off'); 
-% EEG = pop_saveset( EEG, 'filename','exp1subj021_detectFig_resamp512filt20_ICAclean.set','filepath','C:\\Users\\dkreed\\Documents\\EEGdata\\___TEST DATA\\Exp1\\subj021\\');
+% EEG = pop_subcomp( EEG );
+% fn = strrep(fn,'raw','clean');
+% [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 4,'savenew',fn,'gui','off'); 
 
 
 %--------------------------------------------------------------------------

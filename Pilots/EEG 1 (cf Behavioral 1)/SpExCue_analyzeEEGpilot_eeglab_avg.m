@@ -1,11 +1,18 @@
-function SpExCue_analyzeEEGpilot_eeglab_avg(IDs)
+function SpExCue_analyzeEEGpilot_eeglab_avg%(IDs)
 % Analyze SpExCue_EEGpilot
 
-flags.do_print = false;
+IDs = {'RB','RS'};
 
+flags.do_print = true;
+
+site = {...
+%   'frontal';...
+%   'central';...
+  'parietal';...
+  };
 timeflag = {...
-  'Combinations';...
-%   'Onset';...
+%   'Combinations';...
+  'Onset';...
 %   'Change';...
   };
 flags.position = {...
@@ -20,7 +27,7 @@ flags.contralaterality = {...
 %   'rightHemiDominance';... % Getzmann & Lewald (2010)
 %   'intrahemiContralaterality';... % Palomäki et al. (2005)
   };
-flags.do_TFanalysis = true;
+flags.do_TFanalysis = false;
 
 %% 
 
@@ -49,7 +56,14 @@ M = [1,0.5,0];
 MLabel = {'M1','Mp5','M0'};
 LineStyle = {'-','-.',':'};
 
-chNum = 13; % Cz: 32; Pz: 13
+switch site{1}
+    case 'frontal'
+      chNum = 31; % Fz
+    case 'central'
+      chNum = 32; % Cz
+    case 'parietal'
+      chNum = 13; % Pz
+end
 
 thresh = 70;
 
@@ -250,7 +264,7 @@ switch flags.contralaterality{end}
       set(h(ii),'LineStyle',LineStyle{ii});
     end
     set(gca,'XMinorTick','on','XLim',1000*[epochStart,epochEnd],'YLim',4.9*[-1,1])
-    title([timeflag{tt},', listener: ',ID])
+    title([timeflag{tt},', site: ',site{1}])
     xlabel('Time (ms)')
     ylabel('Amplitude ({\mu}V)')
     legend(h,MlegendLabel)
@@ -258,7 +272,7 @@ switch flags.contralaterality{end}
     fig(2) = figure;
     plot([N1amp(pp,:);P2amp(pp,:);P2amp(pp,:)-N1amp(pp,:);P3amp(pp,:)]')
     legend('N1','P2','P2-N1','P3')
-    title([timeflag{tt},', listener: ',ID])
+    title([timeflag{tt},', site: ',site{1}])
     set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel)
     ylabel('Amplitude ({\mu}V)')
     
@@ -335,7 +349,7 @@ if flags.do_print && exist('fig','var')
   if not(exist(fn,'dir'))
     mkdir(fn)
   end
-  fn = fullfile(fn,[mfilename '_' timeflag{tt}]);
+  fn = fullfile(fn,[mfilename '_' timeflag{tt} '_' site{1}]);
   if not(strcmp(flags.contralaterality{end},'off'))
     fn = [fn,'_' flags.contralaterality{end}];
   end

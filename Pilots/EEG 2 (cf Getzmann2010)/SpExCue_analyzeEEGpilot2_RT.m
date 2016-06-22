@@ -36,8 +36,9 @@ RT = subj.RT(idRespTrial);
 
 %% Plot
 fig = figure;
-boxplot(RT,M)
-set(gca,'YLim',[0,.7],'XTickLabel',{'0','1/3','1'})
+boxplot(RT*1e3,M)
+set(gca,'YLim',[0,700],'XTickLabel',{'0','1/3','1'})
+set(gca,'XDir','reverse')
 xlabel('Spectral Contrast, M')
 ylabel('Reaction Time (ms)')
 

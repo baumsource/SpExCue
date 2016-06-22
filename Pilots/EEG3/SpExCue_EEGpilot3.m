@@ -59,7 +59,7 @@ definput.flags.Mrepetition = {'repeateM','changeM'};
 definput.flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 definput.flags.roving = {'componentRove','pairRove'};
 definput.flags.familiarization = {'familiarize','skipFamiliarization'};
-definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
+definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
 definput.flags.tdt = {'TDTon','TDToff'};
 definput.flags.psychtoolbox = {'','debugMode'}; % to generate a very small (useless) Psychtoolbox window but allow access to Matlab command window while executing script
 
@@ -154,13 +154,17 @@ instruction1 = [...
   'During the experiment you are asked to perform the following task:\n',...
   'Press the *C* key if the SECOND sound appears to be CLOSER than the first sound or\n',...
   'press the *F* key if the SECOND sound appears to be FARTHER than the first sound.\n',...
-  'Keep your eyes focused on the centered dot and respond when the dot turned blue (after sound turned off)!\n',...
+  'Keep your eyes focused on the centered white dot and respond when the dot turned blue (after sound turned off)!\n',...
   '\n',...
   'Please try not to move during sound presentation!\n',...
   'You will have the opportunity to take breaks and move after blocks of less than one minute.\n',...
-  '\n',...
-  'Press any key for some examples before starting the actual experiment!\n',...
-  'If these exemplary sounds are incomfortably loud, please tell the experimenter immediately!\n'];
+  '\n'];
+if flags.do_skipFamiliarization
+  instruction1 = [instruction1,'Press any key to start!\n'];
+else
+  instruction1 = [instruction1,'Press any key for some examples before starting the actual experiment!\n'];
+end
+instruction1 = [instruction1,'If the sounds are incomfortably loud, please tell the experimenter immediately!\n'];
 DrawFormattedText(win,instruction1,.2*x_center,'center',white,120,0,0,1.5);
 Screen('Flip',win);
 
@@ -324,10 +328,21 @@ end
 %% Test procedure
 KbStrokeWait;
 
+if Ntotal > 300 % force breaks if testing takes longer than 15 min
+  flags.do_forceBreaks = true;
+else
+  flags.do_forceBreaks = false;
+end
+
 % initialize response variables
 subj.E = nan(Ntotal,1); % relative externalization response: -1...closer, +1...farther
 subj.RT = nan(Ntotal,1); % reaction time
 subj.hit = nan(Ntotal,1); % hits
+
+if flags.do_consistencyFeedback
+  U = unique(abs(subj.D)); % absolute difference in M
+  consistencyCounter = zeros(length(U),Npos); % consistency counter measureing test-retest reliability with collapsed order
+end
 
 ii = 0; % incremental counter
 for bb = 1:Nblocks
@@ -469,6 +484,11 @@ for bb = 1:Nblocks
       else
         Screen('DrawDots',win, [x_center,y_center], 14, red, [], 2);
       end
+    elseif flags.do_consistencyFeedback
+      iU = U==abs(subj.D(ii));
+      consistencyCounter(iU,iPos(ii)) = consistencyCounter(iU,iPos(ii)) + sign(subj.D(ii))*subj.E(ii);
+      Nchange = sum(subj.D(1:ii)~=0);
+      subj.consistency = 100*sum(abs(consistencyCounter(:)))/Nchange;
     else
       Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
     end
@@ -499,12 +519,26 @@ for bb = 1:Nblocks
 
   % Display time course and intermediate score
   infotext = [num2str(bb) ' of ' num2str(Nblocks) ' blocks completed.'];
-  if not(flags.do_noFeedback)
+  if flags.do_consistencyFeedback
+    infotext = [infotext,'\n\n\n Response consistency: ',num2str(subj.consistency,'%3.2f'),'%'];
+  elseif not(flags.do_noFeedback)
     infotext = [infotext,'\n\n\n',num2str(subj.pcorrect,'%3.2f'),'% correct.'];
   end
-  if bb == round(Nblocks/2)
-    infotext = [infotext,'\n\n\n','Great! You already finished the first half.\n'];
+  if flags.do_forceBreaks
+    if bb == round(Nblocks/4)
+      infotext = [infotext,'\n\n\n','First quarter done! Please knock on the door and take a break!\n'];
+    elseif bb == round(Nblocks/2)
+      infotext = [infotext,'\n\n\n','Great! You already finished the first half.\n'];
+      infotext = [infotext,'Please knock on the door and take a break!\n'];
+    elseif bb == round(Nblocks*3/4)
+      infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take one more break!\n'];
+    end
     infotext = [infotext,'Please knock on the door of the booth!'];
+    disp(infotext)
+    DrawFormattedText(win,infotext,'center','center',white);
+    Screen('Flip',win);
+    pause(5)
+    infotext = 'Press any key to continue!';
   else
     infotext = [infotext,'\n\n\n','Press any key to continue!'];
   end

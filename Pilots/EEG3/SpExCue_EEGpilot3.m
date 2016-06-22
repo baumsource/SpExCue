@@ -57,7 +57,7 @@ definput.flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
 definput.flags.stimulation = {'binaural','monaural'};
 definput.flags.Mrepetition = {'repeateM','changeM'};
 definput.flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
-definput.flags.roving = {'componentRove','pairRove'};
+definput.flags.roving = {'componentRove','pairRove','noRove'};
 definput.flags.familiarization = {'familiarize','skipFamiliarization'};
 definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
 definput.flags.tdt = {'TDTon','TDToff'};
@@ -158,13 +158,13 @@ instruction1 = [...
   '\n',...
   'Please try not to move during sound presentation!\n',...
   'You will have the opportunity to take breaks and move after blocks of less than one minute.\n',...
-  '\n'];
+  '\n',...
+  'If the sounds are incomfortably loud, please tell the experimenter immediately!\n'];
 if flags.do_skipFamiliarization
   instruction1 = [instruction1,'Press any key to start!\n'];
 else
   instruction1 = [instruction1,'Press any key for some examples before starting the actual experiment!\n'];
 end
-instruction1 = [instruction1,'If the sounds are incomfortably loud, please tell the experimenter immediately!\n'];
 DrawFormattedText(win,instruction1,.2*x_center,'center',white,120,0,0,1.5);
 Screen('Flip',win);
 

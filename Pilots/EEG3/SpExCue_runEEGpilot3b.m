@@ -10,7 +10,6 @@ procedure = {...
 addpath(fullfile('..','..','MATLAB_general'))
 addpath(fullfile('..','..','..','sofa','API_MO'))
 addpath(fullfile('..','..','..','ltfat'))
-addpath(fullfile('.','analysis'))
 
 ltfatstart
 SOFAstart

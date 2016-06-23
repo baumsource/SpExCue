@@ -1,27 +1,38 @@
 function SpExCue_analyzeEEGpilot3_behavior(ID)
 % Analysis of behavioral data from SpExCue_EEGpilot3
 
-% ID = {'VB'};
-% ID = ID{1};
 if not(exist('ID','var'))
   ID = input('ID: ','s');
 end
 
 flags.do_save = true;
-conditions = {'all',90,0,-90};
-Ncond = length(conditions);
-XTickLabel = {'all','left','front','right'};
 
 %% Load data
 tmp = load(fullfile('..','data',['EEG3pilot_' ID]));
 subj = tmp.subj;
 
+if length(unique(subj.pos(:,1))) == 1 % only one direction
+  conditions = {'all'};
+else
+  conditions = {'all',90,0,-90};
+end
+Ncond = length(conditions);
+PositionLabel = {'all','left','front','right'};
+
 D = diff(subj.Mcomb,1,2);
+Dset = sort(unique(D));
 I = -diff(subj.SPL,1,2); % intensity difference
 E = subj.E; 
 
-%% Regression models for different directions
-for jj = 1:length(conditions)
+%% Regression models and psychometrics for different directions
+R2 = nan(length(conditions),1);
+p = nan(length(conditions),1);
+dprime = nan(length(conditions),1);
+bias = nan(length(conditions),1);
+pCorrect = nan(length(conditions),1);
+consistency = nan(length(conditions),1);
+pFarther = nan(length(Dset),length(conditions));
+for jj = 1:Ncond
 
   % select stimulus condtion
   if isscalar(conditions{jj}); %position
@@ -32,7 +43,7 @@ for jj = 1:length(conditions)
 
 %   % exclude same-M trials
   idMdiff = D ~= 0;
-  idx = idCond;% & idMdiff;
+  idCondMdiff = idCond & idMdiff;
   
   % Correlation Analysis
   y = zscore(E(:));
@@ -41,8 +52,8 @@ for jj = 1:length(conditions)
   else
     X = [ones(length(E),1),zscore([D(:),I(:)])];
   end
-  y = y(idx);
-  X = X(idx,:);
+  y = y(idCondMdiff);
+  X = X(idCondMdiff,:);
 
   [b(jj,:),bint(jj,:,:),r,rint,stats] = regress(y,X);
   R2(jj) = stats(1);
@@ -61,14 +72,26 @@ for jj = 1:length(conditions)
   % Psychometrics
   
   % Psychometric function
-  idselect = idCond;
-  Dset = sort(unique(D(idselect)));
+  
   for dd = 1:length(Dset)
-    idx = idselect & D == Dset(dd);
-    pFarther(dd,jj) = sum(E(idx) == 1)/sum(idx);
+    idx = idCond & D == Dset(dd);
+    pFarther(dd,jj) = 100* sum(E(idx) == 1)/sum(idx);
   end
   
+  % Consistency
+  Uset = unique(abs(Dset));
+  NiU = zeros(length(Uset),1);
+  consistencyCounter = zeros(length(Uset),1);
+  for uu = 1:length(Uset)
+    iU = (abs(D) == Uset(uu)) & idCondMdiff;
+    NiU(uu) = sum(iU);
+    consistencyCounter(uu) = abs(sum(E(iU).*sign(D(iU))));
+  end
+  Nchange(jj) = sum(NiU);
+  consistency(jj) = 100* sum(consistencyCounter) / Nchange(jj);
+  
   % Sensitivity (hit defined as farther judgment if D > 0)
+  idselect = idCond;
   pHit = sum(D(idselect)>0 & E(idselect)>0) / sum(D(idselect)>0);
   pFalseAlarm = sum(D(idselect)<0 & E(idselect)>0) / sum(D(idselect)<0);
   pCorrect(jj,1) = nansum(subj.hit(idselect)) / sum(not(isnan(subj.hit(idselect))));
@@ -78,6 +101,11 @@ for jj = 1:length(conditions)
   
   % Bias
   bias(jj,1) = -0.5*(zHit+zFalseAlarm);
+end
+
+%% Consistency evaluated 
+if Ncond > 1
+  consistency(1) = Nchange(2:end) * consistency(2:end) / Nchange(1); % OR: consistency(1) = subj.consistency;
 end
 
 %% Sensitivity (dprime) analysis for all combinations of M
@@ -103,19 +131,24 @@ end
 fig(1) = figure;
 % subplot(211)
 hAll = plot(Dset,pFarther(:,1),'k');
-if Ncond > 1
+if Ncond > 1 && sum(isnan(pFarther(:))) == 0
   hold on
   hSingle = plot(Dset,pFarther(:,2:end));
+  legend(PositionLabel,'Location','northwest')
+  set(hAll,'LineWidth',2)
 end
-set(hAll,'LineWidth',2)
-set(gca,'XTick',Dset,'XTickLabel',{'-1','-2/3','-1/3','0','1/3','2/3','1'})
+if sum(Dset == 0) % D = 0 included
+  Dlabels = {'-1','-2/3','-1/3','0','1/3','2/3','1'};
+else % excluded
+  Dlabels = {'-1','-2/3','-1/3','1/3','2/3','1'};
+end
+set(gca,'XTick',Dset,'XTickLabel',Dlabels,'YLim',[0,100])
 xlabel('D = M_{change} - M_{onset}')
 ylabel('% ´farther´ judgments')
-legend(XTickLabel,'Location','northwest')
 
 % Tables
 Ncond = length(conditions);
-tab_dprime_bias = table(dprime,bias,pCorrect,'RowNames',XTickLabel(1:Ncond));
+tab_dprime_bias = table(dprime,bias,pCorrect,R2,consistency,'RowNames',PositionLabel(1:Ncond));
 disp(tab_dprime_bias)
 
 [dprime_Mcomb_sort,id_sort] = sort(dprime_Mcomb);
@@ -124,27 +157,27 @@ tab_dprime_Mcomb = table(Mcomb(id_sort,1),Mcomb(id_sort,2),dprime_Mcomb_sort,...
 disp(tab_dprime_Mcomb)
 
 %Correlation analysis
-fig(2) = figure;
-if var(I(:)) == 0;
-  bar(R2(:))
-  ylbl = 'R^2';
-else
-  bar([R2(:),b(:,2:end)])
-  ylbl = 'R^2, regression coefficient';
-  if var(I(:)) == 0;
-    leg = legend('R^2','M change');
-  else
-    leg = legend('R^2','M change','SPL change');
-  end
-  set(leg,'Location','northoutside','Orientation','Horizontal')
-end
-hold on
-plot([1.5,1.5],[0,1],'Color',[.5,.5,.5])
-plot([4.5,4.5],[0,1],'Color',[.5,.5,.5])
-text(1:Ncond,repmat(0.9,[Ncond,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
-set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Ncond+.5])
-% title(ID{1})
-ylabel(ylbl)
+% fig(2) = figure;
+% if var(I(:)) == 0;
+%   bar(R2(:))
+%   ylbl = 'R^2';
+% else
+%   bar([R2(:),b(:,2:end)])
+%   ylbl = 'R^2, regression coefficient';
+%   if var(I(:)) == 0;
+%     leg = legend('R^2','M change');
+%   else
+%     leg = legend('R^2','M change','SPL change');
+%   end
+%   set(leg,'Location','northoutside','Orientation','Horizontal')
+% end
+% hold on
+% plot([1.5,1.5],[0,1],'Color',[.5,.5,.5])
+% plot([4.5,4.5],[0,1],'Color',[.5,.5,.5])
+% text(1:Ncond,repmat(0.9,[Ncond,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
+% set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Ncond+.5])
+% % title(ID{1})
+% ylabel(ylbl)
 
 % % Correlation analysis
 % fig(2) = figure;
@@ -174,6 +207,6 @@ if flags.do_save
   
   save(fn,'tab_dprime_bias','tab_dprime_Mcomb','pFarther','R2','b')
   
-  set(fig(2),'PaperUnits','centimeters','PaperPosition',[100,100,8,10])
-  print(fig(2),Resolution,'-dpng',[fn,'_regress'])
+%   set(fig(2),'PaperUnits','centimeters','PaperPosition',[100,100,8,10])
+%   print(fig(2),Resolution,'-dpng',[fn,'_regress'])
 end

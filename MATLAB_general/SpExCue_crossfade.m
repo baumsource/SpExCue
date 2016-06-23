@@ -19,15 +19,16 @@ if not(exist('fadeIOflag','var'))
   fadeIOflag = false;
 end
 
-n1 = length(sig1);
-ntotal = round(dur*fs);
-ncross = round(tcross*fs);
+n1 = length(sig1); % length of first input signal
+n2 = length(sig2); % length of second input signal
+ntotal = round(dur*fs); % total length of output signal
+ncross = round(tcross*fs); % index of cross-fade center
 
 nfade = 2*round(durfade*fs/2)-1; % closest odd # of time indices for fade
-nstop1 = ncross+(nfade-1)/2;
-nstart2 = ncross-(nfade-1)/2;
-nsig2 = ntotal-nstart2+1;
-fadein = sin(0:pi/2/(nfade-1):pi/2).^2;
+nstop1 = ncross+(nfade-1)/2; % offset index of first input signal
+nstart2 = ncross-(nfade-1)/2; % onset index of second input signal
+nsig2 = ntotal-nstart2+1; % length of second stimulus part
+fadein = sin(0:pi/2/(nfade-1):pi/2);
 fadeout = fliplr(fadein);
   
 if n1 <= ncross % short signal -> no cross-fade
@@ -44,7 +45,7 @@ else % long signal -> cross-fade
   fadedsig1 = postpad(fadedsig1,ntotal);
     
   fader2 = [fadein,ones(1,nsig2-nfade)];
-  fadedsig2 = sig2(1:nsig2,:).*repmat(fader2(:),1,2);
+  fadedsig2 = sig2(n2-nsig2+1:n2,:).*repmat(fader2(:),1,2);
   fadedsig2 = cat(1,zeros(nstart2-1,2),fadedsig2); % prepad
   
 end

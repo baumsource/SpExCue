@@ -13,6 +13,7 @@ function SpExCue_EEGpilot3(ID,varargin)
 % keyvals.fhigh = 16e3; % upper cut-off frequency
 % keyvals.dur = 1.2; % duration of stimulus pair in sec
 % keyvals.fadeDur = 0.05; % duration of fade-in/out in sec
+% keyvals.xFadeDur = 0.01; % duration of cross-fade in sec
 % keyvals.jitter = 0.1; % temporal jitter in sec
 % keyvals.SPL = 70; % SPL in dB
 % keyvals.SPLrove = 0; % roving of SPL in dB
@@ -46,6 +47,7 @@ definput.keyvals.flow = 1e3; % lower cut-off frequency
 definput.keyvals.fhigh = 16e3; % upper cut-off frequency
 definput.keyvals.dur = 1.2; % duration of stimulus pair in sec
 definput.keyvals.fadeDur = 0.05; % duration of fade-in/out in sec
+definput.keyvals.xFadeDur = 0.01; % duration of cross-fade in sec
 definput.keyvals.jitter = 0.1; % temporal jitter in sec
 definput.keyvals.SPL = 70; % SPL in dB
 definput.keyvals.SPLrove = 0; % roving of SPL in dB
@@ -290,7 +292,7 @@ if flags.do_familiarize
         i1 = ii;
         i2 = mod(ii+1,length(kv.M))+1;
         sigpair = SpExCue_crossfade(subj.stim.sig{i1,pp},subj.stim.sig{i2,pp},...
-          subj.stim.fs,kv.dur,kv.dur/2,kv.fadeDur);
+          subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
         sigpair = 10^(kv.SPLrove/2/20)*sigpair; % present max level
         if flags.do_TDTon
           myTDT.load_stimulus(sigpair);
@@ -421,7 +423,7 @@ for bb = 1:Nblocks
     % combine stimulus pairs with temporal jitter of crossfade
     dt = kv.jitter*(rand-0.5);
     [sigpair,nM2] = SpExCue_crossfade(sig1,sig2,...
-      subj.stim.fs,kv.dur,kv.dur/2+dt,kv.fadeDur);
+      subj.stim.fs,kv.dur,kv.dur/2+dt,kv.xFadeDur);
 
     % roving of stimulus pair
     if flags.do_pairRove

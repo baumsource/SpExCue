@@ -24,6 +24,7 @@ function stim = SpExCue_stim( M,ID,varargin )
 %   Optional flags:
 %     noise   : Gaussian white noise burst (default).
 %     speech  : Speech syllable.
+%     DTF     : Directional transfer functions.
 
 % AUTHOR: Robert Baumgartner
 
@@ -38,6 +39,7 @@ definput.keyvals.fadeDuration = 0.05; % duration of fade-in/out in seconds
 definput.keyvals.pos=[0,0]; % spatial position [azimuth,elevation] in deg.
 
 definput.flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
+definput.flags.DTF = {'','DTF'};
 definput.flags.movement = {'static','moveLeftRight'};
 definput.flags.source = {'continuousNoise','noiseBurst','speech','AMnoiseBurst','AMnoise','IR'};
 
@@ -56,6 +58,11 @@ else
   refObj = SOFAload(fullfile(HRTFpath,[ID '_eq.sofa']));
 end
 fsHRTF = refObj.Data.SamplingRate;
+
+%% Optional DTF conversion
+if flags.do_DTF
+  refObj = SOFAhrtf2dtf(refObj);
+end
 
 %% Source signal
 sigPath = strrep(HRTFpath,'HRTFs','Signals');

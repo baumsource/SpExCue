@@ -365,7 +365,7 @@ for bb = 1:Nblocks
   if flags.do_TDTon
     send_event(myTDT, 254) % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
   end
-  pause(1)  % add a pause to ensure the pause is active before the sound 
+  pause(1.5)  % add a pause to ensure the pause is active before the sound 
     
   % Positioning
   if subj.pos(ii+1,1) > 0
@@ -520,17 +520,18 @@ for bb = 1:Nblocks
     end
   end
   
-  % Pause TDT
-  if flags.do_TDTon
-    send_event(myTDT, 255)  % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
-    myTDT.reset();  % rewind and clear buffers
-  end
-  
   % Intermediate score
   subj.pcorrect = 100* nansum(subj.hit(1:ii)) / sum(subj.D(1:ii)~=0);
 
   % Save results
   save(savename,'subj','kv','flags')
+  
+  % Pause TDT
+  if flags.do_TDTon
+    pause(0.5)
+    send_event(myTDT, 255)  % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
+    myTDT.reset();  % rewind and clear buffers
+  end
 
   % Display time course and intermediate score
   infotext = [num2str(bb) ' of ' num2str(Nblocks) ' blocks completed.'];
@@ -548,7 +549,6 @@ for bb = 1:Nblocks
     elseif bb == round(Nblocks*3/4)
       infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take one more break!\n'];
     end
-    infotext = [infotext,'Please knock on the door of the booth!'];
     disp(infotext)
     DrawFormattedText(win,infotext,'center','center',white);
     Screen('Flip',win);
@@ -557,9 +557,13 @@ for bb = 1:Nblocks
   else
     infotext = [infotext,'\n\n\n','Press any key to continue!'];
   end
-  disp(infotext)
   DrawFormattedText(win,infotext,'center','center',white);
   Screen('Flip',win);
+  % Experimenter monitoring info
+  disp('Info given to listener:')
+  disp(infotext)
+  disp('Experimenter-only info:')
+  disp(['Percent correct: ',num2str(subj.pcorrect),'%'])
   KbStrokeWait;
   
 end

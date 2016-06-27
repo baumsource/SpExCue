@@ -17,17 +17,21 @@ stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'
 
 % OR: Create a pair as in experiment
 concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
-          stim.fs,1.2,.6,.05);
-
+          stim.fs,1.2,.6,.1);
+        
+% stimDTF = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'DTF');
+% concatStim = SpExCue_crossfade(stimDTF.sig{1},stim.sig{1},...
+%           stim.fs,1.2,.6,.1);
+        
 %% Spectrogram
 figSgram = figure;
-% subplot(1,2,1)
+subplot(1,2,1)
 sgram(concatStim(:,1),stim.fs,'dynrange',60,'db')
-% set(gca,'YLim',[flow-500,fhigh+500])
+set(gca,'YLim',[flow-500,fhigh+500])
 title('Left')
 subplot(1,2,2)
 sgram(concatStim(:,2),stim.fs,'dynrange',60,'db')
-% set(gca,'YLim',[flow,fhigh])
+set(gca,'YLim',[flow-500,fhigh+500])
 title('Right')
 
 set(figSgram,'PaperUnits','centimeters','PaperPosition',[100,100,10,6])

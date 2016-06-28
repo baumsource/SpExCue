@@ -555,22 +555,23 @@ for bb = 1:Nblocks
     infotext = [infotext,'\n\n\n',num2str(subj.pcorrect,'%3.2f'),'% correct.'];
   end
   if flags.do_forceBreaks
+    forcedBreak = 60; % seconds
     if bb == round(Nblocks/4)
       infotext = [infotext,'\n\n\n','First quarter done! Please knock on the door and take a break!\n'];
     elseif bb == round(Nblocks/2)
       infotext = [infotext,'\n\n\n','Great! You already finished the first half.\n'];
       infotext = [infotext,'Please knock on the door and take a break!\n'];
     elseif bb == round(Nblocks*3/4)
-      infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take one more break!\n'];
+      infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take a break!\n'];
+    else
+      forcedBreak = 5;
     end
     disp(infotext)
     DrawFormattedText(win,infotext,'center','center',white);
     Screen('Flip',win);
-    pause(5)
-    infotext = 'Press any key to continue!';
-  else
-    infotext = [infotext,'\n\n\n','Press any key to continue!'];
+    pause(forcedBreak)
   end
+  infotext = [infotext,'\n\n\n','Press any key to continue!'];
   DrawFormattedText(win,infotext,'center','center',white);
   Screen('Flip',win);
   % Experimenter monitoring info

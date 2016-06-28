@@ -85,10 +85,7 @@ KbName('UnifyKeyNames');
 closerKey = KbName('c');
 fartherKey = KbName('f');
 
-trigVals = struct(... 
-  'catch',7,...
-  'correctResponse',8,...
-  'wrongResponse',9,...
+trigVals = struct(...
   'left',000,...
   'top',100,...
   'right',200,...
@@ -98,7 +95,11 @@ trigVals = struct(...
   'M2_1',3,... % M2 (at stimulus change) of 1
   'M2_p5',2,...
   'M2_0',1,...
-  'stimulusOffset',9);
+  'closer',5,...
+  'farther',6,...
+  'catch',7,...
+  'correctResponse',8,...
+  'wrongResponse',9);
 
 % direction = round(trig/100)
 % M1 = round(mod(trig,100)/10)
@@ -478,13 +479,23 @@ for bb = 1:Nblocks
         keyCodeVal = find(keyCode,1);
     end
     subj.RT(ii) = toc-kv.dur/2+dt;
+    
+    % Externalization response
     subj.E(ii) = sign(keyCodeVal-(closerKey+fartherKey)/2);
+    if flags.do_TDTon
+      if subj.E(ii) < 0 % closer
+        send_event(myTDT, trigVals.closer)
+      else % farther
+        send_event(myTDT, trigVals.farther)
+      end
+    end
+    
+    % Relationship between D and E 
     if subj.D(ii) ~= 0
       subj.hit(ii) = subj.E(ii)*subj.D(ii) > 0;
     end
-    
-    % Send response evaluation trigger
-    if flags.do_TDTon
+    if flags.do_TDTon % Send response evaluation trigger
+      pause(2*trigDuration)
       if isnan(subj.hit(ii))
         send_event(myTDT, trigVals.catch)
       elseif subj.hit(ii)

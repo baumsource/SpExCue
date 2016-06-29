@@ -73,18 +73,18 @@ end
 
 % Primary path definitions required for this analysis
 dirBDF = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Pilots/EEG3/data/';%string with the filename
-dirLOCS = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/';
+dirLOCS = dirBDF;%'/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/';
 
 % dirBDF = 'C:\Users\dkreed\Documents\EEGdata\___TEST DATA\Exp2\';  % directory with the .bdf/.set files
 % dirLOCS = '\\ad\eng\users\d\k\dkreed\Desktop\eeglabstuff\';       % directory with the eeglab locations file
 
 % switch nargin
-%     case 3
-        FS = 512;  % In samps/sec
-        locutoff = 0.5;  % In Hz
-        hicutoff = 100;  % In Hz
-        transitionBandwidth = 1;  % In Hz
-        maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
+% %     case 3
+%         FS = 512;  % In samps/sec
+%         locutoff = 0.5;  % In Hz
+%         hicutoff = 100;  % In Hz
+%         transitionBandwidth = 1;  % In Hz
+%         maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
 %     
 %     case 4
 %         FS = varargin{1};
@@ -120,25 +120,35 @@ dirLOCS = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/';
 %     error('DKR: The parameter ''condString'' MUST BE either ''Back'' or ''Fig'' (case sensitive).')
 % end
 
-if locutoff >= hicutoff
-    error('DKR: Filter cutoff frequencies must be specified as [locutoff, hicutoff], e.g. [0.5 20]. Also, frequencies must not be equal.')
-end
-
+% if locutoff >= hicutoff
+%     error('DKR: Filter cutoff frequencies must be specified as [locutoff, hicutoff], e.g. [0.5 20]. Also, frequencies must not be equal.')
+% end
 
 experimentString = 'SpExCue_EEGpilot3';  % String to label experiment number for the saved eeglab dataset files
+nChansLocsFilename = 'chanLocs_refA.locs';  % filename of the eeglab locations file
+
 refChanNum = 32+[6,7];%[33 34]; % Indicies of reference channels in BDF file -> apply changes also to s
 refChanLabel = 'A1 A2';%'TP9 TP10'; % Labels of reference channels
-nChansLocsFilename = 'biosemi_eloc_32_TPs_EOGs_As.locs';  % filename of the eeglab locations file
+eyeChanNum = 35:37;
+eegChanNum = 1:34;
 
-%**************************************************************************
-% Open EEGlab
+FS = 200;  % In samps/sec
+locutoff = 1;  % In Hz
+% hicutoff = 100;  % In Hz
+transitionBandwidth = 1;  % In Hz
+maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
+
+globalThreshold = [-200 800];
+stimulusEpochRange = [-1,1.9];
+
+%% Open EEGlab
 if not(exist('eeglab','file'))
   addpath('/Users/rbaumgartner/Documents/MATLAB/eeglab')
 end
 [ALLEEG EEG CURRENTSET ALLCOM] = eeglab;
 
-%--------------------------------------------------------------------------
-% Load BDF file
+
+%% Load BDF file
 bdfFilepath = dirBDF;%[dirBDF, 'subj', subjID, '/'];  % NOTE: this path is VERY SPECIFIC TO THE USAGE
 bdfFilename = [experimentString,'_',subjID];%['dkr_', experimentString, '_subj', subjID, '_', expDate, '_detect', condString, '.bdf'];  % NOTE: this filename is VERY SPECIFIC TO THE USAGE
 fn = [bdfFilepath, bdfFilename];
@@ -146,34 +156,77 @@ EEG = pop_biosig([fn,'.bdf'], 'ref',refChanNum ,'refoptions',{'keepref' 'off'});
 [ALLEEG, EEG, ~] = pop_newset(ALLEEG, EEG, 0,'gui','off'); 
 EEG = eeg_checkset(EEG);
 
-%--------------------------------------------------------------------------
-% Remove unused channels
+%% Adjust event list (take only last 8 bits)
+eventList = eeglabTrig2dkrTrigID([EEG.event.type]); 
+for ii = 1:length(eventList)
+	EEG.event(ii).type = eventList(ii);
+end
+
+%% Remove unused channels
 EEG = pop_select(EEG,'nochannel',{'EXG8'});
 EEG = pop_chanedit(EEG, 'load',{[dirLOCS, nChansLocsFilename] 'filetype' 'autodetect'},...  % Set channel locations
   'setref',{[num2str(refChanNum(1)),' ',num2str(refChanNum(2))] refChanLabel});             % and define reference channels
-[ALLEEG, EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
+% [ALLEEG, EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
 EEG = eeg_checkset(EEG);
 [ALLEEG, EEG, ~] = pop_newset(ALLEEG, EEG, 1,'savenew',[fn,'_raw'],'gui','off'); 
 
-%--------------------------------------------------------------------------
-% Resample the data to a specified sampling rate (DEFAULT: 512 samps/sec)
+%% Global artifact rejection for ICA
+
+% Filter the data
+KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
+filtOrder = pop_firwsord('kaiser', FS, transitionBandwidth, maxPassbandRipple);
+EEG = pop_firws(EEG, 'fcutoff', locutoff, 'ftype', 'highpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
+
+% Epoching to stimulus onsets
+eventSet = unique([EEG.event.type]);
+tmp = eventSet(eventSet/10 == round(eventSet/10) & eventSet ~= 0);
+stimulusOnsetEvents = cell(1,length(tmp));
+for ii = 1:length(tmp)
+  stimulusOnsetEvents{ii} = num2str(tmp(ii));
+end
+EEG = pop_epoch(EEG, stimulusOnsetEvents, stimulusEpochRange);
+EEG = pop_rmbase(EEG,[-200,0]);
+ 
+% Resample
+EEG = pop_resample(EEG, FS);
+
+% Threshold EEG channels
+[EEG,indtrialRej1] = pop_eegthresh(EEG,1,eegChanNum,globalThreshold(1),globalThreshold(2),...
+  stimulusEpochRange(1),stimulusEpochRange(2),0,1);
+% Threshold eye channels
+[EEG,indtrialRej2] = pop_eegthresh(EEG,1,eyeChanNum,-1*globalThreshold(2),-1*globalThreshold(1),...
+  stimulusEpochRange(1),stimulusEpochRange(2),0,1);
+indtrialRej = [indtrialRej1,indtrialRej2];
+
+% Remove bad channels
+[EEG, indelecReject] = pop_rejchan(EEG,'elec',eegChanNum);
+% Update channel numbers
+% indelecRemain = true(length(eegChanNum),1);
+% indelecRemain(indelecReject) = false;
+% eegChanNum = eegChanNum(indelecRemain);
+% eyeChanNum = eyeChanNum - length(indelecReject);
+
+% Save
+EEG = eeg_checkset(EEG);
+[ALLEEG, EEG, ~] = pop_newset(ALLEEG, EEG, 1,'savenew',[fn,'_preICA'],'gui','off'); 
+
+%% Resample the data to a specified sampling rate (DEFAULT: 512 samps/sec)
 % EEG = pop_resample(EEG, FS);
 % [ALLEEG, EEG, CURRENTSET] = pop_newset(ALLEEG, EEG, 2,'savenew',[bdfFilepath, experimentString 'subj', subjID, '_detect', condString, '_resamp' num2str(FS)],'gui','off'); 
 
-%--------------------------------------------------------------------------
-% Calculate the filter parameters  
-KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
-filtOrder = pop_firwsord('kaiser', FS, transitionBandwidth, maxPassbandRipple);
+%% Bandpass filtering
 
-%--------------------------------------------------------------------------
-% Filter the data
-EEG = pop_firws(EEG, 'fcutoff', [locutoff hicutoff], 'ftype', 'bandpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
-fn = [fn,'_filt', num2str(hicutoff)];
-[ALLEEG, EEG, CURRENTSET] = pop_newset(ALLEEG, EEG, 3,'savenew',fn,'gui','off'); 
+% % Calculate the filter parameters  
+% KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
+% filtOrder = pop_firwsord('kaiser', FS, transitionBandwidth, maxPassbandRipple);
+% 
+% % Filter the data
+% EEG = pop_firws(EEG, 'fcutoff', [locutoff hicutoff], 'ftype', 'bandpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
+% fn = [fn,'_filt', num2str(hicutoff)];
+% [ALLEEG, EEG, CURRENTSET] = pop_newset(ALLEEG, EEG, 3,'savenew',fn,'gui','off'); 
 
 
-%--------------------------------------------------------------------------
-% Run the ICA analysis
+%% Run the ICA analysis
 [ALLEEG, EEG, CURRENTSET] = eeg_store(ALLEEG, EEG, 0);
 EEG = eeg_checkset( EEG );
 EEG = pop_runica(EEG, 'extended',1,'interupt','on');
@@ -182,8 +235,7 @@ fn = [fn,'_ICAraw'];
 EEG = pop_saveset(EEG,  'filename', fn);%, 'filepath', bdfFilepath);
 
 
-%--------------------------------------------------------------------------
-% Reject components by map
+%% Reject components by map
 % pop_selectcomps(EEG, [1:35] );
 % [ALLEEG EEG] = eeg_store(ALLEEG, EEG, CURRENTSET);
 % EEG = eeg_checkset( EEG );
@@ -192,23 +244,28 @@ EEG = pop_saveset(EEG,  'filename', fn);%, 'filepath', bdfFilepath);
 % [ALLEEG EEG CURRENTSET] = pop_newset(ALLEEG, EEG, 4,'savenew',fn,'gui','off'); 
 
 
-%--------------------------------------------------------------------------
-% Close EEGlab
+%% Close EEGlab
 close all
 
-%--------------------------------------------------------------------------
-% Output and save the data parameters 
+%% Output and save the data parameters 
 paramsOut.timestamp = clock;
 paramsOut.subjID = subjID;
 % paramsOut.expDate = expDate;
 % paramsOut.condString = condString;
 paramsOut.FS = FS;
 paramsOut.locutoff = locutoff;
-paramsOut.hicutoff = hicutoff;
+% paramsOut.hicutoff = hicutoff;
 paramsOut.transitionBandwidth = transitionBandwidth;
 paramsOut.maxPassbandRipple = maxPassbandRipple;
 paramsOut.filterOrder = filtOrder;
 paramsOut.KaiserWindowBeta = KaiserWindowBeta;
+paramsOut.indelecReject = indelecReject;
+paramsOut.icaweights = EEG.icaweights;
+paramsOut.icawinv = EEG.icawinv;
+paramsOut.icachansind = EEG.icachansind;
+paramsOut.icasphere = EEG.icasphere;
+paramsOut.indtrialRej = indtrialRej;
 
-filename = [bdfFilepath, experimentString, 'Subj', subjID, '_paramsOut', num2str(paramsOut.timestamp(1)), '_', num2str(paramsOut.timestamp(2)), '_', num2str(paramsOut.timestamp(3)), '_', num2str(paramsOut.timestamp(4)), '_', num2str(paramsOut.timestamp(5)), '.mat'];
+filename = [bdfFilepath, 'paramsOut_',mfilename, '_', subjID, '.mat'];
 save(filename, 'paramsOut');
+end

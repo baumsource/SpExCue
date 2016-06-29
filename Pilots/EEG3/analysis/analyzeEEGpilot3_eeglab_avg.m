@@ -1,38 +1,63 @@
-function analyzeEEGpilot3_eeglab_avg(IDs)
+function analyzeEEGpilot3_eeglab_avg(varargin)
 % Analyze SpExCue_EEGpilot
 
-flags.do_print = true;
+definput.keyvals.IDs = []; % trials per block
+% Settings for automatic epoch rejection
+definput.keyvals.epochThresh = 70; % threshold in µV within entire epoch
+definput.keyvals.baselineThresh = 70; % threshold in µV within baseline interval
+definput.keyvals.slopeThresh = 50; % max slope in µV/epoch
+definput.keyvals.stepThresh = 50; % threshold in µV for step function based artifact rejection
+definput.keyvals.ERPfmax = 30; % cut-off frequency of low-pass filter for ERPs
+definput.flags.site = {'central','frontal','parietal'}; 
+definput.flags.time = {'Combinations','Onset','Change'}; 
+definput.flags.position = {'all','left','right','top'}; 
+definput.flags.contralaterality = {...
+  'off';...
+  'ipsiVsContra';...
+  'rightHemiDominance';... % Getzmann & Lewald (2010)
+  'intrahemiContralaterality';... % Palomäki et al. (2005)
+  };
+definput.flags.TFanalysis = {'','TFanalysis'};
+definput.flags.eyeChan = {'bipolarEyeChan','monopolarEyeChan'};
+definput.flags.grouping = {'','externalizationGrouping'};
+definput.flags.print = {'','print'};
 
-site = {...
+[flags,kv]  = ltfatarghelper({},definput,varargin);
+
+% flags.do_print = true;
+
+% site = {...
 %   'frontal';...
 %   'central';...
-  'parietal';...
-  };
-timeflag = {...
-  'Combinations';...
+%   'parietal';...
+%   };
+% timeflag = {...
+%   'Combinations';...
 %   'Onset';...
 %   'Change';...
-  };
-flags.position = {...
+%   };
+% flags.position = {...
 %   'left';...
 %   'right';...
 %   'top';...
-  'all';...
-  };
-flags.contralaterality = {...
-  'off';...
+%   'all';...
+%   };
+% flags.contralaterality = {...
+%   'off';...
 %   'ipsiVsContra';...
 %   'rightHemiDominance';... % Getzmann & Lewald (2010)
 %   'intrahemiContralaterality';... % Palomäki et al. (2005)
-  };
-flags.do_TFanalysis = false;
+%   };
+% flags.do_TFanalysis = false;
 
 %% 
 
-if not(exist('IDs','var'))
+if isempty(kv.IDs)
   IDs = {input('Subject ID: ','s')};
-elseif ischar(IDs)
-  IDs = {IDs};
+elseif ischar(kv.IDs)
+  IDs = {kv.IDs};
+else
+  IDs = kv.IDs;
 end
 
 if not(exist('pop_loadset','file'))
@@ -40,22 +65,23 @@ if not(exist('pop_loadset','file'))
   eeglab
 end
 
+
+% filenameIDx = 'SpExCue_EEGpilot3_IDx_filt100_ICAclean.set';
+filenameIDx = 'SpExCue_EEGpilot3_IDx_blinkICrej_fmax100.set';
+filepath = '../data/';
+fnLOCS = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/biosemi_eloc.locs';
+
 %% Settings
 if flags.do_TFanalysis
   epochStart = -.6;  % seconds before the trigger event
   epochEnd = 1.6; % seconds after the trigger event
 else
   epochStart = -.2;  % seconds before the trigger event
-  epochEnd = .6; % seconds after the trigger event
+  epochEnd = 1.1; % seconds after the trigger event
 end
 
 baselineCorrectInterval = [-200 0];
-ERPfhigh = 50; % cut-off frequency of low-pass filter for ERPs
 
-% Settings for automatic epoch rejection
-epochThresh = 75; % threshold in µV within entire epoch
-baselineThresh = 20; % threshold in µV within baseline interval
-maxslope = 5; % max slope in µV/epoch
 
 N1latency = [.120,.220]; % seconds
 P2latency = [.220,.300]; % seconds
@@ -81,7 +107,7 @@ addpath(dirSupp);
 
 % Evaluation site
 if strcmp(flags.contralaterality,'off')
-  switch site{1}
+  switch flags.site
     case 'frontal'
       chNum = 31; % Fz
     case 'central'
@@ -93,36 +119,63 @@ else
   chNum = 1:32;
 end
 
+Nrej.epochTresh = 0;
+Nrej.baselineThresh = 0;
+Nrej.slopeThresh = 0;
+Nrej.stepThresh = 0;
 for ll = 1:length(IDs)
   
   ID = IDs{ll};
 
-  for pp = 1:length(flags.position)
+  for pp = 1%:length(flags.position)
 
     %% Load the actual data
-    filename = ['SpExCue_EEGpilot3_',ID,'_filt100_ICAclean.set'];
-    filepath = '../data/';
-    fnLOCS = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Tools/EEG/biosemi_eloc.locs';
-    EEG = pop_loadset('filename', filename, 'filepath', filepath); 
+    filename = strrep(filenameIDx,'IDx',ID);
+    if flags.do_TFanalysis
+      EEG = pop_loadset('filename', filename, 'filepath', filepath); 
+    else % ERP
+      fnERP = strrep(filename,'fmax100',['fmax',num2str(kv.ERPfmax)]);
+      try
+        EEG = pop_loadset('filename', fnERP, 'filepath', filepath); 
+      catch
+        EEG = pop_loadset('filename', filename, 'filepath', filepath); 
+        % Low-pass filter for ERP analysis
+        transitionBandwidth = 1;  % In Hz
+        maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
+        KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
+        filtOrder = pop_firwsord('kaiser', EEG.srate, transitionBandwidth, maxPassbandRipple);
+        EEG = pop_firws(EEG, 'fcutoff', kv.ERPfmax, 'ftype', 'lowpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
+        EEG = pop_saveset(EEG,  'filename', fullfile(filepath,fnERP));
+      end
+    end
     EEG = eeg_checkset(EEG);  % verify consistency of the fields of an EEG dataset
-    EEG = pop_chanedit(EEG, 'load',{fnLOCS 'filetype' 'autodetect'});
+%     EEG = pop_chanedit(EEG, 'load',{fnLOCS 'filetype' 'autodetect'});
+
+%% Create bipolar eye channels
+if flags.do_bipolarEyeChan
+  EEG = pop_eegchanoperator( EEG,... 
+    {'ch35=ch30-ch35 label vEOG',...
+     'ch36=ch36-ch37 label RHEOG',...
+     'ch37=ch37-ch36 label LRVEOG'});
+end
 
     %% Convert and adjust event list
-    % Take only last 8 bits
-    eventList = eeglabTrig2dkrTrigID([EEG.event.type]); 
-    % Adjust to code M combination in event list (bug in first run of EEGpilot)
-    idx = floor(mod(eventList,100)/10) == 0 & mod(eventList,10) < 8 & mod(eventList,10) > 0;
-    eventList(idx) = mod(eventList(circshift(idx,-1)),100) + eventList(idx);
-    % Write into EEG object
-    for i = 1:length(eventList)
-        EEG.event(i).type = eventList(i);
-    end
+%     % Take only last 8 bits
+%     eventList = eeglabTrig2dkrTrigID([EEG.event.type]); 
+%     % Adjust to code M combination in event list (bug in first run of EEGpilot)
+%     idx = floor(mod(eventList,100)/10) == 0 & mod(eventList,10) < 8 & mod(eventList,10) > 0;
+%     eventList(idx) = mod(eventList(circshift(idx,-1)),100) + eventList(idx);
+%     % Write into EEG object
+%     for i = 1:length(eventList)
+%         EEG.event(i).type = eventList(i);
+%     end
+eventList = [EEG.event.type];
 
     for tt = 1%:length(timeflag)
 
     %% Event selection
 
-      switch flags.position{pp} % set undesired events to 0
+      switch flags.position % set undesired events to 0
         case 'left' % 0
           eventList(eventList>=100) = 0;
         case 'top' % 100
@@ -132,7 +185,7 @@ for ll = 1:length(IDs)
       %   otherwise % all
       end
 
-      switch timeflag{tt}
+      switch flags.time
 
         case 'Onset'
           MlegendLabel = {'M_o = 1','M_o = 1/3','M_o = 0'};
@@ -176,22 +229,50 @@ for ll = 1:length(IDs)
 
       %% Artifactual epoch rejection
       for ii = 1:length(MLabel)
+        eval(['Ntmp0 = EEG_',MLabel{ii},'.trials;'])
+        
         % by thresholding
         eval(['EEG_',MLabel{ii},'= pop_eegthresh(EEG_',MLabel{ii},...
-          ',1,chNum,-epochThresh,epochThresh,epochStart,epochEnd,0,1);'])
-        if epochThresh > baselineThresh
+          ',1,chNum,-kv.epochThresh,kv.epochThresh,epochStart,epochEnd,0,1);'])
+        eval(['Ntmp1 = EEG_',MLabel{ii},'.trials;'])
+        Nrej.epochTresh = Nrej.epochTresh + (Ntmp0-Ntmp1);
+        
+        if kv.epochThresh > kv.baselineThresh
           eval(['EEG_',MLabel{ii},'= pop_eegthresh(EEG_',MLabel{ii},...
-            ',1,chNum,-baselineThresh,baselineThresh,',...
+            ',1,chNum,-kv.baselineThresh,kv.baselineThresh,',...
             'baselineCorrectInterval(1),baselineCorrectInterval(2),0,1);'])
+          eval(['Ntmp2 = EEG_',MLabel{ii},'.trials;'])
+          Nrej.baselineThresh = Nrej.baselineThresh + (Ntmp1-Ntmp2);
+        else
+          Ntmp2 = Ntmp1;
         end
+        
         % by detecting linear drifts
         eval(['EEG_',MLabel{ii},'= pop_rejtrend(EEG_',MLabel{ii},...
-          ',1,chNum,512, maxslope, 0.3,0,1,0);'])
+          ',1,chNum,512, kv.slopeThresh, 0.3,0,1,0);'])
+        eval(['Ntmp3 = EEG_',MLabel{ii},'.trials;'])
+        Nrej.slopeThresh = Nrej.slopeThresh + (Ntmp2-Ntmp3);
+        
+        % step function-based artifact detection
+        eval(['EEG_',MLabel{ii},'= pop_artstep_EEGlab(EEG_',MLabel{ii},...
+          ',1e3*[epochStart,epochEnd],',num2str(kv.stepThresh),',200,50,',...
+          num2str(chNum),',1);'])
+        eval(['Ntmp4 = EEG_',MLabel{ii},'.trials;'])
+        Nrej.stepThresh = Nrej.stepThresh + (Ntmp3-Ntmp4);
+%         arglist = vararg2str({'Threshold',kv.stepThresh,...
+%           'Channel',chNum,'Windowstep',50,'Windowsize',200} );
+%         eval(['EEG_',MLabel{ii},'= pop_artmwppth(EEG_',MLabel{ii},...
+%           ',',arglist,');'])
         eval(['EEG_',MLabel{ii},'= eeg_checkset(EEG_',MLabel{ii},');'])
       end
 
+      %% Group by externalization response 
+%       if flags.do_externalizationGrouping
+%         EEG_closer = 
+%       end
+      
       %% Average epochs and evaluate component measures
-      switch flags.contralaterality{end}
+      switch flags.contralaterality
         
         case 'ipsiVsContra'
           
@@ -251,18 +332,9 @@ for ll = 1:length(IDs)
           else
 
             for ii = 1:length(MLabel)
-              % Low-pass filter and baseline-correct the data again
-              transitionBandwidth = 1;  % In Hz
-              maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
-              KaiserWindowBeta = pop_kaiserbeta(maxPassbandRipple);
-              filtOrder = pop_firwsord('kaiser', EEG.srate, transitionBandwidth, maxPassbandRipple);
-              eval(['tmpEEG = EEG_',MLabel{ii},';'])
-              tmpEEG = pop_firws(tmpEEG, 'fcutoff', ERPfhigh, 'ftype', 'lowpass', 'wtype', 'kaiser', 'warg', KaiserWindowBeta, 'forder', filtOrder, 'minphase', 0);
-              tmpEEG = pop_rmbase(tmpEEG, baselineCorrectInterval);
-              eval(['EEG_',MLabel{ii},' = tmpEEG;'])
-
+              
               % Across-trial average of ERPs
-              Ntrials(ii,ll) = size(tmpEEG.data,3);
+              eval(['Ntrials(ii,ll) = size(EEG_',MLabel{ii},'.data,3);'])
               eval(['populationMean',MLabel{ii},'(:,ll) = squeeze(mean(EEG_',MLabel{ii},'.data(chNum,:,:),3));']);
 
               % ERP component amplitudes
@@ -280,8 +352,11 @@ for ll = 1:length(IDs)
   end
 end
 
+% Display artifact rejection counters
+disp(Nrej)
+
 %% Average across listeners
-switch flags.contralaterality{end}
+switch flags.contralaterality
   case 'ipsiVsContra'
   case {'rightHemiDominance','intrahemiContralaterality'}
   otherwise
@@ -302,7 +377,7 @@ end
 
 %% Plots
 
-switch flags.contralaterality{end}
+switch flags.contralaterality
   
   case 'off' % mean epoch
     
@@ -338,9 +413,9 @@ switch flags.contralaterality{end}
       end
       set(gca,'XMinorTick','on','XLim',1000*[epochStart,epochEnd],'YLim',5.9*[-1,1])
       if length(IDs) == 1
-        title(['Listener: ',ID,'; Site: ',site{1}])
+        title(['Listener: ',ID,'; Site: ',flags.site])
       else
-        title(['Site: ',site{1}])
+        title(['Site: ',flags.site])
       end
       xlabel('Time (ms)')
       ylabel('Amplitude ({\mu}V)')
@@ -356,13 +431,13 @@ switch flags.contralaterality{end}
       plot([N1amp(pp,:);P2amp(pp,:);P2amp(pp,:)-N1amp(pp,:);P3amp(pp,:)]')
       legend('N1','P2','P2-N1','P3','Location','eastoutside')
       if length(IDs) == 1
-        title(['Listener: ',ID,'; Site: ',site{1}])
+        title(['Listener: ',ID,'; Site: ',flags.site])
       else
-        title(['Site: ',site{1}])
+        title(['Site: ',flags.site])
       end
       set(gca,'XTick',1:length(MLabel),'XTickLabel',MlegendLabel,'YLim',[-6,8])
       ylabel('Amplitude ({\mu}V)')
-      if strcmp(timeflag{1},'Combinations')
+      if strcmp(flags.time,'Combinations')
         xlabel('D = M_{change} - M_{onset}')
         set(gca,'XTickLabel',{'-1','-2/3','-1/3','0','1/3','2/3','1'})
       end
@@ -370,7 +445,7 @@ switch flags.contralaterality{end}
     
   case 'rightHemiDominance'
     fig = figure;
-    switch timeflag{tt}
+    switch flags.time
       case 'Onset'
         plot(M,[N1RHdom(pp,:);P2RHdom(pp,:)]')
         xlabel('Spectral contrast, M')
@@ -396,7 +471,7 @@ switch flags.contralaterality{end}
       N1LHdiff = N1LH(idR,:) - N1LH(idL,:); % contra-ipsilateral stimulus 
       plot([-10,10],zeros(2,1),'k-')
       hold on
-      switch timeflag{tt}
+      switch flags.time
         case 'Onset'
           h = plot(M,[N1RHdiff;N1LHdiff]');
           xlabel('Spectral contrast, M')
@@ -429,11 +504,13 @@ if flags.do_print && exist('fig','var')
   if not(exist(fn,'dir'))
     mkdir(fn)
   end
-  fn = fullfile(fn,[mfilename '_' timeflag{tt} '_' site{1}]);
-  if not(strcmp(flags.contralaterality{end},'off'))
-    fn = [fn,'_' flags.contralaterality{end}];
+  fn = fullfile(fn,[mfilename '_' flags.time '_' flags.site]);
+  if not(strcmp(flags.contralaterality,'off'))
+    fn = [fn,'_' flags.contralaterality];
   end
-  fn = [fn,'_',flags.position{pp}];
+  if not(flags.do_all)
+    fn = [fn,'_',flags.position];
+  end
   
   % individual filename 
   if flags.do_TFanalysis

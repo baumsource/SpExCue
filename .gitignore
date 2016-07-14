@@ -10,3 +10,7 @@
 *.bdf
 *.set
 *.fdt
+*.dat*
+*.ica*
+*.study
+*.fig

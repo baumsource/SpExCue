@@ -1,11 +1,34 @@
-function SpExCue_analyzeEEGpilot3_behavior(ID)
-% Analysis of behavioral data from SpExCue_EEGpilot3
+function [pFarther,stats,meta] = SpExCue_analyzeEEGpilot3_behavior(ID,plotflag,saveflag,exD0flag)
+% SpExCue_analyzeEEGpilot3_behavior - Analysis of behavioral data from SpExCue_EEGpilot3
+%  Usage: [pFarther,stats,meta] = SpExCue_analyzeEEGpilot3_behavior(ID,plotflag,saveflag,exD0flag)
+%
+%  Input parameters:
+%  ID:        subject ID with experimental postfix, e.g., RBeeg
+%  plotflag:  set true to plot results (default: true)
+%  saveflag:  set true to save (print) results (default: false)
+%  exD0flag:  set true to exclude D=0 conditions (default: true)
+%
+%  Output parameters:
+%  pFarther:  percentage of "farther" judgments
+%  stats:     .Pos: dprime, bias, pCorrect, R2, and consistency for
+%                   different positions
+%             .M: dprime for different combinations of spectral contrasts 
+%  meta:      .Dset: set of spectral contrast differences
+%             .position: azimuth 
+%             .positionLabel: corresponding position labels 
 
 if not(exist('ID','var'))
   ID = input('ID: ','s');
 end
-
-flags.do_save = true;
+if not(exist('plotflag','var'))
+  plotflag = true;
+end
+if not(exist('saveflag','var'))
+  saveflag = false;
+end
+if not(exist('exD0flag','var'))
+  exD0flag = true;
+end
 
 %% Load data
 tmp = load(fullfile('..','data',['EEG3pilot_' ID]));
@@ -21,6 +44,9 @@ PositionLabel = {'all','left','front','right'};
 
 D = diff(subj.Mcomb,1,2);
 Dset = sort(unique(D));
+if exD0flag
+  Dset = Dset(Dset ~= 0);
+end
 I = -diff(subj.SPL,1,2); % intensity difference
 E = subj.E; 
 
@@ -125,36 +151,41 @@ for ii=1:size(Mcomb,1)
   dprime_Mcomb(ii) = zHit - zFalseAlarm;
 end
 
-%% Plots & Tables
-
-% Psychometric functions
-fig(1) = figure;
-% subplot(211)
-hAll = plot(Dset,pFarther(:,1),'k');
-if Ncond > 1 && sum(isnan(pFarther(:))) == 0
-  hold on
-  hSingle = plot(Dset,pFarther(:,2:end));
-  legend(PositionLabel,'Location','northwest')
-  set(hAll,'LineWidth',2)
-end
-if sum(Dset == 0) % D = 0 included
-  Dlabels = {'-1','-2/3','-1/3','0','1/3','2/3','1'};
-else % excluded
-  Dlabels = {'-1','-2/3','-1/3','1/3','2/3','1'};
-end
-set(gca,'XTick',Dset,'XTickLabel',Dlabels,'YLim',[0,100])
-xlabel('D = M_{change} - M_{onset}')
-ylabel('% ´farther´ judgments')
-
-% Tables
+%% Create tables
+clear stats
 Ncond = length(conditions);
-tab_dprime_bias = table(dprime,bias,pCorrect,R2,consistency,'RowNames',PositionLabel(1:Ncond));
-disp(tab_dprime_bias)
+stats.Pos = table(dprime,bias,pCorrect,R2,consistency,'RowNames',PositionLabel(1:Ncond));
 
 [dprime_Mcomb_sort,id_sort] = sort(dprime_Mcomb);
-tab_dprime_Mcomb = table(Mcomb(id_sort,1),Mcomb(id_sort,2),dprime_Mcomb_sort,...
+stats.M = table(Mcomb(id_sort,1),Mcomb(id_sort,2),dprime_Mcomb_sort,...
   'VariableNames',{'smallerM','largerM','dprime'});
-disp(tab_dprime_Mcomb)
+
+%% Show plots & tables
+
+if plotflag
+  % Psychometric functions
+  fig(1) = figure;
+  % subplot(211)
+  hAll = plot(Dset,pFarther(:,1),'k');
+  if Ncond > 1 && sum(isnan(pFarther(:))) == 0
+    hold on
+    hSingle = plot(Dset,pFarther(:,2:end));
+    legend(PositionLabel,'Location','northwest')
+    set(hAll,'LineWidth',2)
+  end
+  if sum(Dset == 0) % D = 0 included
+    Dlabels = {'-1','-2/3','-1/3','0','1/3','2/3','1'};
+  else % excluded
+    Dlabels = {'-1','-2/3','-1/3','1/3','2/3','1'};
+  end
+  set(gca,'XTick',Dset,'XTickLabel',Dlabels,'YLim',[0,100])
+  xlabel('D = M_{change} - M_{onset}')
+  ylabel('% ´farther´ judgments')
+  
+  % display tables
+  disp(stats.Pos)
+  disp(stats.M)
+end
 
 %Correlation analysis
 % fig(2) = figure;
@@ -192,8 +223,8 @@ disp(tab_dprime_Mcomb)
 % leg = legend('R^2','M change','SPL change');
 % set(leg,'Location','northoutside','Orientation','Horizontal')
 
-%% Print
-if flags.do_save
+%% Print/Save
+if saveflag
   FontSize = 10;
   Resolution = '-r600';
   set(findall(fig,'-property','FontSize'),'FontSize',FontSize)
@@ -205,8 +236,13 @@ if flags.do_save
   set(fig(1),'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
   print(fig(1),Resolution,'-dpng',[fn,'_psyFct'])
   
-  save(fn,'tab_dprime_bias','tab_dprime_Mcomb','pFarther','R2','b')
+%   save(fn,'tabs','pFarther','R2','b')
   
 %   set(fig(2),'PaperUnits','centimeters','PaperPosition',[100,100,8,10])
 %   print(fig(2),Resolution,'-dpng',[fn,'_regress'])
+end
+
+meta.Dset = Dset;
+meta.position = conditions;
+meta.positionLabel = PositionLabel(1:length(conditions));
 end

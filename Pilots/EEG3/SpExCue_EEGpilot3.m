@@ -29,7 +29,7 @@ function SpExCue_EEGpilot3(ID,varargin)
 % flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 % flags.roving = {'componentRove','pairRove','noRoving'};
 % flags.familiarization = {'familiarize','skipFamiliarization'};
-% flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
+% flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback','D0detectionFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
 % flags.tdt = {'TDTon','TDToff'};
 % flags.psychtoolbox = {'','debugMode'}; % to generate a very small (useless) Psychtoolbox window but allow access to Matlab command window while executing script
 
@@ -60,8 +60,8 @@ definput.flags.stimulation = {'binaural','monaural'};
 definput.flags.Mrepetition = {'repeateM','changeM'};
 definput.flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 definput.flags.roving = {'componentRove','pairRove','noRoving'};
-definput.flags.familiarization = {'familiarize','skipFamiliarization'};
-definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
+definput.flags.familiarization = {'skipFamiliarization','familiarize'};
+definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback','D0detectionFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
 definput.flags.tdt = {'TDTon','TDToff'};
 definput.flags.psychtoolbox = {'','debugMode'}; % to generate a very small (useless) Psychtoolbox window but allow access to Matlab command window while executing script
 
@@ -84,6 +84,7 @@ end
 KbName('UnifyKeyNames');
 closerKey = KbName('c');
 fartherKey = KbName('f');
+equalKey = KbName('space');
 
 trigVals = struct(...
   'left',000,...
@@ -97,7 +98,7 @@ trigVals = struct(...
   'M2_0',1,...
   'closer',5,...
   'farther',6,...
-  'catch',7,...
+  'equal',7,...
   'correctResponse',8,...
   'wrongResponse',9,...
   'stimulusOffset',0);
@@ -117,7 +118,7 @@ end
 
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
-minmaxChVolt = 2.53;%1.0;  % min/max voltage for the output channels (scaling)
+minmaxChVolt = db2mag(5*3)*2.53;  % min/max voltage for the output channels (scaling), 2.53 yields 78db SPL at -3dB headphone amplification
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
@@ -149,25 +150,27 @@ end
 
 %% Listener instruction
 instruction1 = [...
-  'In this experiment you will hear pairs of sounds. Only focus on their changes in\n',... 
-  'SPATIAL LOCATION and try to ignore other differences like intensity or timbre.\n',...
-  'Sometimes it might sound as coming from a specific location outside your head and\n',...
-  'sometimes it might sound as coming from close to your scalp or even inside your head.\n',...
+  'In this experiment you will hear pairs of sounds. Only focus on their changes in \n',... 
+  'SPATIAL LOCATION and try to ignore other differences like intensity or timbre. \n',...
+  'Sometimes it might sound as coming from a specific location outside your head and \n',...
+  'sometimes it might sound as coming from close to your scalp or even inside your head. \n',...
   '\n',...
-  'During the experiment you are asked to perform the following task:\n',...
-  'Press the *C* key if the SECOND sound appears to be CLOSER than the first sound or\n',...
-  'press the *F* key if the SECOND sound appears to be FARTHER than the first sound.\n'];
+  'During the experiment your task is to:\n',...
+  'Press the *C* key if the SECOND sound appears to be CLOSER than the first sound or\n'];
 if flags.do_repeateM
   instruction1 = [instruction1,...
-    'In some trials the sound will not change at all. Your response will not be evaluated\n',... 
-    'for these trials and you can randomly press one of the two keys to go on.\n'];
+  'press the *F* key if the SECOND sound appears to be FARTHER than the first sound or\n',...
+  'press the *SPACEBAR* if the sound does not change at all (catch trial).\n'];
+else
+  instruction1 = [instruction1,...,...
+  'press the *F* key if the SECOND sound appears to be FARTHER than the first sound.\n'];
 end
 instruction1 = [instruction1,...
   '\n',...
-  'In order to obtain good EEG recordings it is important that you\n',...
-  'keep your eyes focused on the centered white dot during sound presentation\n',...
-  'and respond not before the dot turned blue (after sound off-set).\n',...
-  'Please try not to move during sound presentation! You will have the \n',...
+  'For good EEG recordings, it is very important that you keep \n',...
+  'your eyes focused on the centered white dot during sound presentation\n',...
+  'and respond not before the dot turned blue, which happens after sound off-set.\n',...
+  'Also, please try not to move during sound presentation! You will have the \n',...
   'opportunity to take breaks and move after blocks of less than one minute.\n',...
   '\n'];
 if flags.do_consistencyFeedback
@@ -176,9 +179,14 @@ if flags.do_consistencyFeedback
     'the absolute difference between the number of closer vs farther judgments divided by \n',... 
     'the total number of trials testing the same stimulus pair in both possible orders.\n',...
     '\n'];
+elseif flags.do_D0detectionFeedback
+  instruction1 = [instruction1,...
+    'After each block you will receive feedback on how many catch trials you correctly detected\n',...
+    'and how many trials you erroneously marked as catch trials (false alarms).\n',... 
+    '\n'];
 end
 instruction1 = [instruction1,...
-  'If the sounds are incomfortably loud, please tell the experimenter immediately!\n'];
+  'If the sounds are incomfortably loud, please tell the experimenter immediately!\n\n'];
 if flags.do_skipFamiliarization
   instruction1 = [instruction1,'Press any key to start!\n'];
 else
@@ -475,31 +483,35 @@ for bb = 1:Nblocks
 
     % Response via keyboard 
     keyCodeVal = 0;
-    while not(keyCodeVal==closerKey || keyCodeVal==fartherKey) % 67...C, 70...F
+    while not(any(keyCodeVal==[closerKey,fartherKey,equalKey]))
         [tmp,keyCode] = KbWait([],2);
         keyCodeVal = find(keyCode,1);
     end
     subj.RT(ii) = toc-kv.dur/2+dt;
     
     % Externalization response
-    subj.E(ii) = sign(keyCodeVal-(closerKey+fartherKey)/2);
+    if keyCodeVal == closerKey
+      subj.E(ii) = -1;
+      Etrig = trigVals.closer;
+    elseif keyCodeVal == fartherKey
+      subj.E(ii) = 1;
+      Etrig = trigVals.farther;
+    elseif keyCodeVal == equalKey
+      subj.E(ii) = 0;
+      Etrig = trigVals.equal;
+    else
+      subj.E(ii) = nan;
+      Etrig = [];
+    end
     if flags.do_TDTon
-      if subj.E(ii) < 0 % closer
-        send_event(myTDT, trigVals.closer)
-      else % farther
-        send_event(myTDT, trigVals.farther)
-      end
+      send_event(myTDT, Etrig)
     end
     
     % Relationship between D and E 
-    if subj.D(ii) ~= 0
-      subj.hit(ii) = subj.E(ii)*subj.D(ii) > 0;
-    end
+    subj.hit(ii) = subj.E(ii) == sign(subj.D(ii));
     if flags.do_TDTon % Send response evaluation trigger
       pause(2*trigDuration)
-      if isnan(subj.hit(ii))
-        send_event(myTDT, trigVals.catch)
-      elseif subj.hit(ii)
+      if subj.hit(ii)
         send_event(myTDT, trigVals.correctResponse)
       else
         send_event(myTDT, trigVals.wrongResponse)
@@ -518,6 +530,11 @@ for bb = 1:Nblocks
       consistencyCounter(iU,iPos(ii)) = consistencyCounter(iU,iPos(ii)) + sign(subj.D(ii))*subj.E(ii);
       Nchange = sum(subj.D(1:ii)~=0);
       subj.consistency = 100*sum(abs(consistencyCounter(:)))/Nchange;
+    elseif flags.do_D0detectionFeedback
+      iD0 = subj.D(1:ii) == 0;
+      D0hitRate = 100* sum(subj.hit(iD0)) / sum(iD0);
+      iDx = subj.D(1:ii) ~= 0;
+      D0faRate = 100* sum(subj.E(iDx)==0) / sum(iDx);
     else
       Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
     end
@@ -535,51 +552,60 @@ for bb = 1:Nblocks
   end
   
   % Intermediate score
-  subj.pcorrect = 100* nansum(subj.hit(1:ii)) / sum(subj.D(1:ii)~=0);
+  subj.pcorrect = 100* nansum(subj.hit(1:ii)) / ii;
 
-  % Save results
-  save(savename,'subj','kv','flags')
-  
-  % Pause TDT
-  if flags.do_TDTon
-    pause(0.5)
-    send_event(myTDT, 255)  % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
-    myTDT.reset();  % rewind and clear buffers
-  end
+  if kv.NperBlock > 6
+    % Save results
+    save(savename,'subj','kv','flags')
 
-  % Display time course and intermediate score
-  infotext = [num2str(bb) ' of ' num2str(Nblocks) ' blocks completed.'];
-  if flags.do_consistencyFeedback
-    infotext = [infotext,'\n\n\n Consistency ratio: ',num2str(subj.consistency,'%3.2f'),'%'];
-  elseif not(flags.do_noFeedback)
-    infotext = [infotext,'\n\n\n',num2str(subj.pcorrect,'%3.2f'),'% correct.'];
-  end
-  if flags.do_forceBreaks
-    forcedBreak = 60; % seconds
-    if bb == round(Nblocks/4)
-      infotext = [infotext,'\n\n\n','First quarter done! Please knock on the door and take a break!\n'];
-    elseif bb == round(Nblocks/2)
-      infotext = [infotext,'\n\n\n','Great! You already finished the first half.\n'];
-      infotext = [infotext,'Please knock on the door and take a break!\n'];
-    elseif bb == round(Nblocks*3/4)
-      infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take a break!\n'];
-    else
-      forcedBreak = 5;
+    % Pause TDT
+    if flags.do_TDTon
+      pause(0.5)
+      send_event(myTDT, 255)  % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
+      myTDT.reset();  % rewind and clear buffers
     end
-    disp(infotext)
+
+    % Display time course and intermediate score
+    infotext = [num2str(bb) ' of ' num2str(Nblocks) ' blocks completed.'];
+    if flags.do_consistencyFeedback
+      infotext = [infotext,'\n\n\n Consistency ratio: ',num2str(subj.consistency,'%3.2f'),'%'];
+    elseif flags.do_D0detectionFeedback
+      if not(isnan(D0hitRate))
+        infotext = [infotext,'\n\n\n Catch trials: ',num2str(D0hitRate,'%3.2f'),...
+          '% correctly detected with ',num2str(D0faRate,'%3.2f'),'% false alarms.'];
+      end
+    elseif not(flags.do_noFeedback)
+      infotext = [infotext,'\n\n\n',num2str(subj.pcorrect,'%3.2f'),'% correct.'];
+    end
+    if flags.do_forceBreaks
+      forcedBreak = 60; % seconds
+      if bb == round(Nblocks/4)
+        infotext = [infotext,'\n\n\n','First quarter done! Please knock on the door and take a break!\n'];
+      elseif bb == round(Nblocks/2)
+        infotext = [infotext,'\n\n\n','Great! You already finished the first half.\n'];
+        infotext = [infotext,'Please knock on the door and take a break!\n'];
+      elseif bb == round(Nblocks*3/4)
+        infotext = [infotext,'\n\n\n','Almost done! Please knock on the door and take a break!\n'];
+      else
+        forcedBreak = 5;
+      end
+      disp(infotext)
+      DrawFormattedText(win,infotext,'center','center',white);
+      Screen('Flip',win);
+      pause(forcedBreak)
+    end
+    infotext = [infotext,'\n\n\n','Press any key to continue!'];
     DrawFormattedText(win,infotext,'center','center',white);
     Screen('Flip',win);
-    pause(forcedBreak)
+    % Experimenter monitoring info
+    disp('Info given to listener:')
+    disp(infotext)
+    KbStrokeWait;
   end
-  infotext = [infotext,'\n\n\n','Press any key to continue!'];
-  DrawFormattedText(win,infotext,'center','center',white);
-  Screen('Flip',win);
+  
   % Experimenter monitoring info
-  disp('Info given to listener:')
-  disp(infotext)
   disp('Experimenter-only info:')
   disp(['Percent correct: ',num2str(subj.pcorrect),'%'])
-  KbStrokeWait;
   
 end
 

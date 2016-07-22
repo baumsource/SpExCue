@@ -1,6 +1,10 @@
 function SpExCue_plotMag
 % plot Magnitude responses
 
+if not(exist('SpExCue_stim','file'))
+  addpath('/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/MATLAB_general')
+end
+
 flags.do_print = true;
 stimulusFlag = 'IR'; % 'IR' 'speech'
 flags.do_erb = false;
@@ -17,7 +21,7 @@ fhigh = 16e3;
 fs = 48e3;
 
 %% Generate flat-source stimulus
-subj.stim = SpExCue_stim( M,ID,[azi,ele],fs,flow,fhigh,70,stimulusFlag);
+[subj.stim,refObj] = SpExCue_stim( M,ID,[azi,ele],fs,flow,fhigh,70,stimulusFlag);
 
 
 %% Add spectral ripple 
@@ -86,11 +90,12 @@ for pp = 1:2
 end
 
 %% Evaluate and plot azimuth estimation and ILDs
-lookup = data_wierstorf2013('itd2anglelookuptable');
+lookup = itd2anglelookuptable(refObj,refObj.Data.SamplingRate,'dietz2011');
 % fig(iplot+2) = figure;
 fig(2) = figure;
 for ii = 1:length(M)
-  [phi(ii),phi_std,itd,ild,cfreqs] = wierstorf2013estimateazimuth(subj.stim.sig{ii},lookup,'fs',subj.stim.fs,'dietz2011','rms_weighting');
+  [phi(ii),phi_std,itd,ild,cfreqs] = wierstorf2013estimateazimuth(...
+    subj.stim.sig{ii},lookup,'fs',subj.stim.fs,'dietz2011','rms_weighting');
 %   ild = mean(ild);
 %   plot(cfreqs,ild(length(ild)-length(cfreqs)+1:end)) % sometimes first center frequency omitted
   [exPattern,fc] = baumgartner2014spectralanalysis(subj.stim.sig{ii},'flow',flow);

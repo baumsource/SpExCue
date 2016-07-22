@@ -1,6 +1,6 @@
-function stim = SpExCue_stim( M,ID,varargin )
+function [stim,Obj] = SpExCue_stim( M,ID,varargin )
 %SpExCue_stim creates stimuli for SpExCue project
-%   Usage: stim = SpExCue_stim( M, ID, [pos, fs, flow, fhigh, SPL] )
+%   Usage: [stim,Obj] = SpExCue_stim( M, ID, [pos, fs, flow, fhigh, SPL] )
 %
 %   Input parameters:
 %     M     : spectral magnitude compression factor.
@@ -8,7 +8,8 @@ function stim = SpExCue_stim( M,ID,varargin )
 %
 %   Output parameters:
 %     stim :  stimulus structure. field *sig*: sound signals as cell array 
-%              with dimensions M x pos; field *fs*: sampling rate.
+%             with dimensions M x pos; field *fs*: sampling rate.
+%     Obj  :  listener-specific reference HRTFs in SOFA format
 %
 %   Optional key-value pairs:
 %     pos   : set of positions. 1st column: azimuth, 2nd column: elevation.
@@ -183,5 +184,9 @@ end
 %     stim.sig{ii} = 0.6*stim.sig{ii};
 %   end
 % end
+
+if nargout == 2
+  Obj = refObj;
+end
 
 end

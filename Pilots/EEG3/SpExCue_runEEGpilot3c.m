@@ -24,9 +24,9 @@ switch procedure{1}
     %% Familiarization 
     Nrep = 6;
     fnExtension = 'debug';
-    SpExCue_EEGpilot3(ID,'M',[1,0],'azi',-90:90:90,'Nrep',Nrep,...
+    SpExCue_EEGpilot3(ID,'M',[1,0],'azi',-30,'Nrep',Nrep,...
       'noFeedback','changeM','skipFamiliarization','noRoving',...
-      'screenNumber',1,'fnExtension',fnExtension)
+      'screenNumber',1,'fnExtension',fnExtension,'debugMode','flow',800,'fhigh',16000)
     
     cd analysis
     SpExCue_analyzeEEGpilot3_behavior([ID,fnExtension])

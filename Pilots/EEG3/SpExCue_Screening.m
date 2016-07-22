@@ -65,7 +65,7 @@ end
 
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
-minmaxChVolt = db2mag(5*3)*2.53;  % min/max voltage for the output channels (scaling), 2.53 yields 78db SPL at -3dB headphone amplification
+minmaxChVolt = db2mag(3*3)*2.53;  % min/max voltage for the output channels (scaling), 2.53 yields 78db SPL at -3dB headphone amplification
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
@@ -73,8 +73,9 @@ if flags.do_TDTon
 end
 
 %% Psychtoolbox seetings and initialization
-
-Screen('Preference', 'SkipSyncTests', 1);
+if flags.do_TDToff
+    Screen('Preference', 'SkipSyncTests', 1);
+end
 
 KbName('UnifyKeyNames');
 key.none = KbName('0');
@@ -163,5 +164,6 @@ for pp = 1:Npos
   end
 end
 
+sca
 end
 

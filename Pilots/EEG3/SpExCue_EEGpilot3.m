@@ -92,7 +92,7 @@ end
 
 %% Initialize the TDT and playback system
 fsVal = 48; % sampling rate, 48 stands for 48828.125 Hz (-> max buffer length 85 seconds)
-minmaxChVolt = db2mag(5*3)*2.53;  % min/max voltage for the output channels (scaling), 2.53 yields 78db SPL at -3dB headphone amplification
+minmaxChVolt = db2mag(3*3)*2.53;  % min/max voltage for the output channels (scaling), 2.53 yields 78db SPL at -3dB headphone amplification
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
@@ -584,6 +584,8 @@ for bb = 1:Nblocks
   
 end
 
+% Save results
+save(savename,'subj','kv','flags')
 
 %% Inform listener that experiment is completed
 i1 = 'Thank you! The experiment is completed.';

@@ -1,4 +1,4 @@
-function response = SpExCue_Screening( ID,varargin )
+function tab = SpExCue_Screening( ID,varargin )
 %SpExCue_Screening - Screening to assess affected dimensionality by changes
 %in spectral contrast
 %
@@ -50,17 +50,15 @@ definput = arg_SpExcue;
 definput.keyvals.Mcomb = [1,0];
 [flags,kv]  = ltfatarghelper({},definput,varargin);
 
+if length(kv.azi) > 1 && length(kv.ele) == 1
+  kv.ele = kv.ele*ones(length(kv.azi),1);
+end
+
 %% Enter listener ID
 if not(exist('ID','var'))
   subj.ID = upper(input('Enter subject ID: ','s'));
 else
   subj.ID = ID;
-end
-
-%% Save path
-savename = fullfile('data',[saveFileNamePrefix '_' subj.ID,kv.fnExtension]);
-if not(exist('./data','dir'))
-  mkdir('data')
 end
 
 %% Initialize the TDT and playback system
@@ -73,9 +71,8 @@ if flags.do_TDTon
 end
 
 %% Psychtoolbox seetings and initialization
-if flags.do_TDToff
-    Screen('Preference', 'SkipSyncTests', 1);
-end
+
+%     Screen('Preference', 'SkipSyncTests', 1);
 
 KbName('UnifyKeyNames');
 key.none = KbName('0');
@@ -108,9 +105,6 @@ Screen('WindowSize', win);
 
 
 %% Stimulus generation
-if length(kv.azi) > 1 && length(kv.ele) == 1
-  kv.ele = kv.ele*ones(length(kv.azi),1);
-end
 pos = [kv.azi(:),kv.ele(:)];
 Npos = length(kv.azi);
 % pos = pos(randperm(Npos),:);
@@ -123,13 +117,12 @@ subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL
 
 %% Instruction
 infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question(s)!\n\n\n',...
-	'Does the sound appear to move? \n',...
-  'If not, press *0*! \n', ...
-  'If it does, what is the dominant direction of movement? \n',...
-  'Press *1* if it is left/right! \n',...
-  'Press *2* if it is up/down! \n',...
-  'Press *3* if it is front/back!'];
-DrawFormattedText(win,infotext,'center','center',white);
+	'Does the sound appear to move? If it does, what is the dominant direction of movement?\n\n',...
+  'Press *0* for no movement!\n', ...
+  'Press *1* for left-right! \n',...
+  'Press *2* for up-down! \n',...
+  'Press *3* for front-back!'];
+DrawFormattedText(win,infotext,.2*x_center,'center',white);
 Screen('Flip',win);
 
 %% Play sounds
@@ -143,6 +136,7 @@ for pp = 1:Npos
     keyCodeVal = find(keyCode,1);
     disp(num2str(keyCodeVal))
     if keyCodeVal == key.play
+      pause(.1)
       if flags.do_TDTon
         myTDT.load_stimulus(sigpair);
         myTDT.play_blocking()
@@ -151,6 +145,7 @@ for pp = 1:Npos
       end
     end
   end
+  
   if any(keyCodeVal==key.LR)
     response{pp} = 'LeftRight';
   elseif any(keyCodeVal==key.UD)
@@ -162,7 +157,30 @@ for pp = 1:Npos
   else
     response{pp} = 'NA';
   end
+  
+  if pp < Npos
+    DrawFormattedText(win,'Next stimulus...',.2*x_center,'center',white);
+    Screen('Flip',win);
+    pause(1)
+    DrawFormattedText(win,infotext,.2*x_center,'center',white);
+    Screen('Flip',win);
+  else
+    DrawFormattedText(win,'Thank you!',.2*x_center,'center',white);
+    Screen('Flip',win);
+    pause(1)
+  end
+  
 end
+
+azimuth = kv.azi(:);
+tab = table(azimuth,response);
+
+%% Save results
+savename = fullfile('data',[saveFileNamePrefix '_' subj.ID,kv.fnExtension]);
+if not(exist('./data','dir'))
+  mkdir('data')
+end
+save(savename,'tab')
 
 sca
 end

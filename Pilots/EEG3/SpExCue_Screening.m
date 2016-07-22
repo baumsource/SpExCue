@@ -116,12 +116,12 @@ end
 subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
 
 %% Instruction
-infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question(s)!\n\n\n',...
+infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question!\n\n\n',...
 	'Does the sound appear to move? If it does, what is the dominant direction of movement?\n\n',...
-  'Press *0* for no movement!\n', ...
-  'Press *1* for left-right! \n',...
-  'Press *2* for up-down! \n',...
-  'Press *3* for front-back!'];
+  'Press *0* for no movement!\n\n', ...
+  'Press *1* for left-right (or right-left)! \n\n',...
+  'Press *2* for up-down (or down-up)! \n\n',...
+  'Press *3* for front-back (or back-front)!'];
 DrawFormattedText(win,infotext,.2*x_center,'center',white);
 Screen('Flip',win);
 
@@ -131,7 +131,8 @@ for pp = 1:Npos
   sigpair = SpExCue_crossfade(subj.stim.sig{1,pp},subj.stim.sig{2,pp},...
             subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
   keyCodeVal = 0;
-  while not(any(keyCodeVal==[key.none,key.LR,key.UD,key.FB]))
+  played = false;
+  while not(any(keyCodeVal==[key.none,key.LR,key.UD,key.FB]) && played)
     [tmp,keyCode] = KbWait([],2);
     keyCodeVal = find(keyCode,1);
     disp(num2str(keyCodeVal))
@@ -143,6 +144,7 @@ for pp = 1:Npos
       else
         sound(sigpair,fs)
       end
+      played = true;
     end
   end
   

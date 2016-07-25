@@ -3,11 +3,11 @@
 ID = 'RB';
 M = [1,0];%.25,.5,.75,1,1.5];
 % M = [1,0,1,0];
-pos = [90,0];
-flow = 1e3;
+pos = [0,0];
+flow = 800;
 fhigh = 16e3;
 
-stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60);
+stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'ARI');
 
 % Concatenate longer set of Ms
 % concatStim = stim.sig{1};

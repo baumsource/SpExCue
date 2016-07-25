@@ -11,7 +11,7 @@ fnX = 'SpExCue_EEGpilot3_Sxx_blinkICrej_fmax30_Cxx.set';
 fnStudy = 'SpExCue_EEGpilot3_ALL_blinkICrej_fmax30_groupE.study';
 subject = {'RS','RB','S01','S02','S04'}; % RS: M = 0.5; S03: reversed externalization judgements
 condition = {'Closer','Farther'};
-design = 3; % 1: all, 2: Mc=1/3, 3: D=1/3, 4: D=-1/3
+design = 1; % 1: all, 2: Mc=1/3, 3: D=1/3, 4: D=-1/3
 
 %% Create STUDY
 
@@ -61,7 +61,7 @@ NtrialsTab = array2table(Ntrials,'RowNames',condition,'VariableNames',[subject,{
 
 % Channels
 [STUDY ALLEEG customRes] = std_precomp(STUDY, ALLEEG, 'channels', 'interp', 'on',... % { 'Cz' 'Pz' }
-	'erp', 'on', 'spec', 'off', 'ersp', 'off', 'itc', 'off', 'erspparams', ...
+	'erp', 'on', 'spec', 'off', 'ersp', 'on', 'itc', 'on', 'erspparams', ...
     { 'cycles', [2,10], 'freqs', [2 20],'nfreqs',10, 'alpha', 0.01, 'padratio' 1 });
 % ICs
 % [STUDY ALLEEG customRes] = std_precomp(STUDY, ALLEEG, 'components', 'interp', 'on',...
@@ -83,9 +83,9 @@ NtrialsTab = array2table(Ntrials,'RowNames',condition,'VariableNames',[subject,{
 % [STUDY, ALLEEG] = pop_precomp(STUDY, ALLEEG); % precomputed everything
               
 %% Topographic analysis 
-STUDY = pop_statparams(STUDY,'condstats','on','mode','eeglab','mcorrect','none','alpha',nan);
-% STUDY = pop_statparams(STUDY,'condstats','on','mode','fieldtrip',...
-%   'fieldtripmethod','montecarlo','fieldtripmcorrect','cluster');% 'fieldtripclusterparam',{'clusterstatistic','maxsum'}
+% STUDY = pop_statparams(STUDY,'condstats','on','mode','eeglab','mcorrect','none','alpha',nan);
+STUDY = pop_statparams(STUDY,'condstats','on','mode','fieldtrip',...
+  'fieldtripmethod','montecarlo','fieldtripmcorrect','cluster');% 'fieldtripclusterparam',{'clusterstatistic','maxsum'}
 
 
 % Scalp topographies
@@ -107,7 +107,7 @@ for ii = 1%:length(C)
   else
     [~,selChan] = min(C(ii).pcond{1});
   end
-  for jj = [23,32];%selChan
+  for jj = [32];%selChan
     [STUDY, C(ii).erp(jj).erpdata, C(ii).erp(jj).erptimes, ~, C(ii).erp(jj).pcond] = std_erpplot(...
       STUDY,ALLEEG,'channels',ChanLbls(jj));
 

@@ -1,13 +1,13 @@
 % listen to concatenated stimuli with regularly ordered spectral contrast
 
-ID = 'RB';
+ID = 'S06';
 M = [1,0];%.25,.5,.75,1,1.5];
 % M = [1,0,1,0];
 pos = [0,0];
 flow = 800;
 fhigh = 16e3;
 
-stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'ARI');
+stim = SpExCue_stim(M,ID,'pos',pos,'speech','flow',flow,'fhigh',fhigh,'SPL',60,'HRCeq');
 
 % Concatenate longer set of Ms
 % concatStim = stim.sig{1};
@@ -39,4 +39,4 @@ print(figSgram,'-r600','-dpng',mfilename)
 
 %% Playback
 % pause
-sound(concatStim,stim.fs)
+% sound(concatStim,stim.fs)

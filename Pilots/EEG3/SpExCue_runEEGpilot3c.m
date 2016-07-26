@@ -2,10 +2,10 @@
 
 % Amp setting: -12 dB !!!
 
-ID = 'RB'; % RS2
+ID = 'S06'; % RS2
 procedure = {...
-  'familiarization';...
-%   'behavioral';...
+%   'familiarization';...
+  'behavioral';...
 %   'eeg';...
   }; % type 1 or true to run with EEG setting
 
@@ -35,11 +35,11 @@ switch procedure{1}
   case 'behavioral'
     %% Behavioral pilot (3 repetitions for 3 positions take 5 min) 
     Nrep = 2*6; % 252 trials -> 13 min presentation time -> 20 min with breaks
-    fnExtension = 'behav';
+    fnExtension = 'behavSpeech';
     
-    SpExCue_EEGpilot3(ID,'azi',-90:90:90,'Nrep',Nrep,...
+    SpExCue_EEGpilot3(ID,'azi',90,'Nrep',Nrep,... %-90:90:90
       'D0detectionFeedback','repeateM','skipFamiliarization','noRoving',...
-      'screenNumber',1,'fnExtension',fnExtension)
+      'screenNumber',1,'fnExtension',fnExtension,'HRCeq')
   
     cd analysis
     SpExCue_analyzeEEGpilot3_behavior([ID,fnExtension])
@@ -51,7 +51,7 @@ switch procedure{1}
     fnExtension = 'eeg';
     SpExCue_EEGpilot3(ID,'azi',-90,'Nrep',Nrep,...
       'D0detectionFeedback','repeateM','skipFamiliarization','noRoving',...
-      'screenNumber',1,'fnExtension',fnExtension)
+      'screenNumber',1,'fnExtension',fnExtension,'HRCeq')
   
     cd analysis
     SpExCue_analyzeEEGpilot3_behavior([ID,fnExtension])

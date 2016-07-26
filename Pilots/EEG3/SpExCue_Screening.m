@@ -112,7 +112,7 @@ if flags.do_TDTon
 else
   fs = 48.8e3;
 end
-subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
+subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur);
 
 %% Instruction
 infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question!\n\n',...
@@ -131,7 +131,7 @@ for pp = 1:Npos
             subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
   keyCodeVal = 0;
   played = false;
-  while not(any(keyCodeVal==[key.none,key.LR,key.UD,key.FB]) && played)
+  while not(any(keyCodeVal==[key.none,key.distance,key.direction]) && played)
     [tmp,keyCode] = KbWait([],2);
     keyCodeVal = find(keyCode,1);
     disp(num2str(keyCodeVal))

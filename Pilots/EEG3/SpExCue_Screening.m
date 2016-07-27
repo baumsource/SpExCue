@@ -112,7 +112,7 @@ if flags.do_TDTon
 else
   fs = 48.8e3;
 end
-subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
+subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),'argimport',flags,kv );
 
 %% Instruction
 infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question!\n',...

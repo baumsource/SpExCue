@@ -33,14 +33,25 @@ end
 %% Load data
 tmp = load(fullfile('..','data',['EEG3pilot_' ID]));
 subj = tmp.subj;
-
-if length(unique(subj.pos(:,1))) == 1 % only one direction
-  conditions = {'all'};
-else
-  conditions = {'all',90,0,-90};
+pos = unique(subj.pos(:,1));
+Npos = length(pos);
+conditions = {'all'};
+PositionLabel = conditions;
+if Npos > 1 % only one direction
+  for ii = 1:Npos
+    conditions{ii+1} = pos(ii,1);
+    if pos(ii,1) < 0
+      PositionLabel{ii+1} = 'right';
+    elseif pos(ii,1) == 0
+      PositionLabel{ii+1} = 'front';
+    elseif pos(ii,1) > 0
+      PositionLabel{ii+1} = 'left';
+    else
+      PositionLabel{ii+1} = 'none';
+    end
+  end
 end
 Ncond = length(conditions);
-PositionLabel = {'all','left','front','right'};
 
 D = diff(subj.Mcomb,1,2);
 Dset = sort(unique(D));

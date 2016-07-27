@@ -31,22 +31,31 @@ function [stim,Obj] = SpExCue_stim( M,ID,varargin )
 
 %% Check input
 
-definput.keyvals.flow=700; % Hz
-definput.keyvals.fhigh=18e3; % Hz
-definput.keyvals.signalDuration=1.6; % seconds
-definput.keyvals.SPL=70; % dB
-definput.keyvals.fs=48e3; % Hz
-definput.keyvals.fadeDuration = 0.05; % duration of fade-in/out in seconds
+% definput.keyvals.flow=700; % Hz
+% definput.keyvals.fhigh=18e3; % Hz
+% definput.keyvals.individualSignalDur=1.6; % seconds
+% definput.keyvals.SPL=70; % dB
+% definput.keyvals.fs=48e3; % Hz
+% definput.keyvals.fadeDur = 0.05; % duration of fade-in/out in seconds
+% definput.keyvals.pos=[0,0]; % spatial position [azimuth,elevation] in deg.
+
+% definput.flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
+% definput.flags.DTF = {'','DTF'};
+% definput.flags.movement = {'static','moveLeftRight'};
+% definput.flags.source = {'continuousNoise','noiseBurst','speech','AMnoiseBurst','AMnoise','IR'};
+
+definput = arg_SpExcue;
 definput.keyvals.pos=[0,0]; % spatial position [azimuth,elevation] in deg.
-
-definput.flags.HRTFs = {'HRC3ms','HRCeq','ARI'};
-definput.flags.DTF = {'','DTF'};
-definput.flags.movement = {'static','moveLeftRight'};
-definput.flags.source = {'continuousNoise','noiseBurst','speech','AMnoiseBurst','AMnoise','IR'};
-
 [flags,kv]=ltfatarghelper(...
-  {'pos','fs','flow','fhigh','SPL','signalDuration'},definput,varargin);
+  {'pos','fs','flow','fhigh','SPL','individualSignalDur'},definput,varargin);
 
+% position key-value pair kept for backwards compatibility
+if all(kv.pos == 0)
+  if length(kv.ele) == 1 && length(kv.azi) > 1
+    kv.ele = repmat(kv.ele,length(kv.azi),1);
+  end
+  kv.pos = [kv.azi(:),kv.ele(:)];
+end
 
 %% Listener's HRTFs
 HRTFpath = strrep(which('SpExCue_stim'),...
@@ -71,8 +80,8 @@ if flags.do_noiseBurst
   % ramped 500-ms Gaussian white noise burst
   sig = noise(round(0.5*fsHRTF),1,'white');
 elseif flags.do_AMnoise % 100-Hz modulation frequency (Getzmann & Lewald, 2010)
-  sig = noise(round(kv.signalDuration*fsHRTF),1,'white');
-  t = 0:1/fsHRTF:kv.signalDuration-1/fsHRTF;
+  sig = noise(round(kv.individualSignalDur*fsHRTF),1,'white');
+  t = 0:1/fsHRTF:kv.individualSignalDur-1/fsHRTF;
   AMf = 100; % modulation frequency
   MD = .12; % modulation depth
   AM = 1+MD*sin(2*pi*AMf*t'+pi);
@@ -89,18 +98,18 @@ elseif flags.do_speech
   fssig = tmp.fs; % Hz
   % concatenate (commented because preprocessed) 
 %   nstart = 15460;
-%   sig = sig(nstart:min(nstart+round(kv.signalDuration*fssig),length(sig)));
+%   sig = sig(nstart:min(nstart+round(kv.individualSignalDur*fssig),length(sig)));
   % resample acc. to HRTFs
   Q = fssig/gcd(fssig,fsHRTF);
   P = fsHRTF/gcd(fssig,fsHRTF);
   sig = resample(sig,P,Q);
 else % flags.do_continuousNoise
   % long Gaussian white noise burst
-  sig = noise(round(kv.signalDuration*fsHRTF),1,'white'); 
+  sig = noise(round(kv.individualSignalDur*fsHRTF),1,'white'); 
 end
 
 %% Fade in/out
-sinRamp = sin(pi/2*(0:kv.fadeDuration*fsHRTF-1)/(kv.fadeDuration*fsHRTF)).^2;
+sinRamp = sin(pi/2*(0:kv.fadeDur*fsHRTF-1)/(kv.fadeDur*fsHRTF)).^2;
 sig = sig.*[sinRamp,ones(1,length(sig)-2*length(sinRamp)),fliplr(sinRamp)]';
 
 %% HRTF filtering, M adjustment  
@@ -123,7 +132,7 @@ for ii = 1:length(M)
       rightwards = [repmat(azi,[1,7]),azi-(0:90/5:90)];
       [stim.sig{ii,1}, tmp.azi, tmp.ele] = SpExCue_SOFAspat(...
         sig,Obj{ii},leftwards,ele*ones(1,length(leftwards)));
-  %     figure; plot(0:kv.signalDuration/(length(tmp.azi)-1):kv.signalDuration,tmp.azi)
+  %     figure; plot(0:kv.individualSignalDur/(length(tmp.azi)-1):kv.individualSignalDur,tmp.azi)
       stim.sig{ii,2} = SpExCue_SOFAspat(sig,Obj{ii},rightwards,ele*ones(1,length(rightwards)));
       stim.sig{ii,3} = SpExCue_SOFAspat(sig,Obj{ii},azi,ele);
     end

@@ -182,7 +182,7 @@ if flags.do_TDTon
 else
   fs = 48.8e3;
 end
-subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL,flags.HRTFs,'signalDuration',kv.dur );
+subj.stim = SpExCue_stim( kv.M,subj.ID,pos,round(fs),'argimport',flags,kv );
 
 % Monaural?
 if flags.do_monaural

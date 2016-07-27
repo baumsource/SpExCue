@@ -43,4 +43,4 @@ concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
 
 %% Playback
 % pause
-sound(concatStim,stim.fs)
+% sound(concatStim,stim.fs)

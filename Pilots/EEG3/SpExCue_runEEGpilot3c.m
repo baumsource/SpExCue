@@ -2,11 +2,12 @@
 
 % Amp setting: -12 dB !!!
 
-ID = 'S06'; % RS2
+ID = 'S07'; % RS2
 procedure = {...
+%   'screening';...
 %   'familiarization';...
-  'behavioral';...
-%   'eeg';...
+%   'behavioral';...
+  'eeg';...
   }; % type 1 or true to run with EEG setting
 
 addpath(fullfile('..','..','MATLAB_general'))
@@ -20,10 +21,14 @@ sca
 % rippleDepth = 0;
 
 switch procedure{1}
+  case 'screening'
+        
+    SpExCue_Screening(ID,'azi',[-90,0,90],'HRCeq')
+    
   case 'familiarization'
     %% Familiarization 
     Nrep = 6;
-    fnExtension = 'debug';
+    fnExtension = 'famili';
     SpExCue_EEGpilot3(ID,'M',[1,0],'azi',-30,'Nrep',Nrep,...
       'noFeedback','changeM','skipFamiliarization','noRoving',...
       'screenNumber',1,'fnExtension',fnExtension,'debugMode','flow',800,'fhigh',16000)
@@ -35,9 +40,9 @@ switch procedure{1}
   case 'behavioral'
     %% Behavioral pilot (3 repetitions for 3 positions take 5 min) 
     Nrep = 2*6; % 252 trials -> 13 min presentation time -> 20 min with breaks
-    fnExtension = 'behavSpeech';
+    fnExtension = 'behav';
     
-    SpExCue_EEGpilot3(ID,'azi',90,'Nrep',Nrep,... %-90:90:90
+    SpExCue_EEGpilot3(ID,'azi',[-90,90],'Nrep',Nrep,... %-90:90:90
       'D0detectionFeedback','repeateM','skipFamiliarization','noRoving',...
       'screenNumber',1,'fnExtension',fnExtension,'HRCeq')
   

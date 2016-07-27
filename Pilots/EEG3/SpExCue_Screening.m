@@ -75,8 +75,8 @@ end
 %     Screen('Preference', 'SkipSyncTests', 1);
 
 KbName('UnifyKeyNames');
-key.none = KbName('0');
-key.direction = [KbName('1'),KbName('1!')];
+key.none = [KbName('0'),KbName('0)')];
+key.elevation = [KbName('1'),KbName('1!')];
 key.distance = [KbName('2'),KbName('2@')];
 key.play = KbName('space');
 
@@ -116,11 +116,12 @@ subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),kv.flow,kv.fhigh,kv.SPL
 
 %% Instruction
 infotext = ['Press *spacebar* to play the sound as often as you want and answer the following question!\n\n',...
-  'This screen remains displayed during stimulus presentation.\n\n\n',...
-	'Does the sound appear to move? If yes, does it move mainly in direction or distance (relative to the center of your head)?\n\n',...
-  'Press *0* for no movement!\n\n', ...
-  'Press *1* for movement in direction! \n\n',...
-  'Press *2* for movement in distance!'];
+  '(This screen remains displayed during stimulus presentation.)\n\n\n\n\n',...
+	'Does the sound appear to move? If yes, does it move mainly in direction or distance\n\n',...
+  '(relative to the center of your head)?\n\n',...
+  '   Press *0* for no movement!\n\n', ...
+  '   Press *1* for movement in elevation! \n\n',...
+  '   Press *2* for movement in distance!'];
 DrawFormattedText(win,infotext,.2*x_center,'center',white);
 Screen('Flip',win);
 
@@ -131,7 +132,7 @@ for pp = 1:Npos
             subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
   keyCodeVal = 0;
   played = false;
-  while not(any(keyCodeVal==[key.none,key.distance,key.direction]) && played)
+  while not(any(keyCodeVal==[key.none,key.distance,key.elevation]) && played)
     [tmp,keyCode] = KbWait([],2);
     keyCodeVal = find(keyCode,1);
     disp(num2str(keyCodeVal))
@@ -147,8 +148,8 @@ for pp = 1:Npos
     end
   end
   
-  if any(keyCodeVal==key.direction)
-    response{pp} = 'direction';
+  if any(keyCodeVal==key.elevation)
+    response{pp} = 'elevation';
   elseif any(keyCodeVal==key.distance)
     response{pp} = 'distance';
   elseif keyCodeVal==key.none

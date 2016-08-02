@@ -208,7 +208,7 @@ if plotflag
   set(gca,'XTick',Dset,'XTickLabel',Dlabels,'YLim',[-3,103])
   xlabel('Spectral contrast change (M_{onset}\rightarrowM_{change})')
   ylabel('% ´farther´ judgments')
-  title(ID(1:3))
+  title(ID)
   
   % display tables
   disp(stats.Pos)

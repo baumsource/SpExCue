@@ -84,6 +84,7 @@ bias = nan(length(conditions),1);
 pCorrect = nan(length(conditions),1);
 consistency = nan(length(conditions),1);
 pFarther = nan(length(Dset),length(conditions));
+idplot = false(length(conditions),1);
 for jj = 1:Ncond
 
   % select stimulus condtion
@@ -162,6 +163,7 @@ for jj = 1:Ncond
   bias(jj,1) = -0.5*(zHit+zFalseAlarm);
   
   legendLabel{jj} = [PositionLabel{jj},': d^{\prime}=',num2str(dprime(jj,1),'%1.2f')];
+  idplot(jj) = true;
 end
 
 %% Consistency evaluated 
@@ -201,10 +203,10 @@ if plotflag
   % Psychometric functions
   fig(1) = figure;
   for ii = 1:Ncond
-    plot(Dset,pFarther(:,ii),PositionColors(ii));
+    h(ii) = plot(Dset,pFarther(:,ii),PositionColors(ii));
     hold on
   end
-  legend(legendLabel,'Location','northwest')
+  legend(h(idplot),legendLabel(idplot),'Location','northwest')
   set(gca,'XTick',Dset,'XTickLabel',Dlabels,'YLim',[-3,103])
   xlabel('Spectral contrast change (M_{onset}\rightarrowM_{change})')
   ylabel('% ´farther´ judgments')

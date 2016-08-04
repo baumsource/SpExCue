@@ -75,6 +75,9 @@ switch flags.timeLock
     LineStyle = {'-','-','-',':',':',':','-.','-.','-.'};
     Color = [Color;Color;flipud(Color)];
     timeLockedEventNum = {31,32,21,11,22,33,12,23,13};
+    MlegendLabel = {'M1-0','M1-i','Mi-0',...
+                    'M0-0','Mi-i','M1-1',...
+                    'M0-i','Mi-1','M0-1'};
     
 end
 

@@ -182,6 +182,11 @@ savename = fullfile('data',[saveFileNamePrefix,'_',subj.ID,'_',saveFileNamePostf
 if not(exist('./data','dir'))
   mkdir('data')
 end
+
+% introduce counter in filename for multiple runs of screening
+tmp = dir([savename,'*']);
+savename = [savename,num2str(length(tmp)+1)];
+
 save(savename,'tab')
 
 sca

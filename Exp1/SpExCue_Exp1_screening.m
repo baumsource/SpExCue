@@ -79,6 +79,8 @@ KbName('UnifyKeyNames');
 key.none = [KbName('0'),KbName('0)')];
 key.elevation = [KbName('1'),KbName('1!')];
 key.distance = [KbName('2'),KbName('2@')];
+key.yes = KbName('y');
+key.no = KbName('n');
 key.play = KbName('space');
 
 PsychDefaultSetup(1); % makes sure Screen is functional and unifies keyCodes across OS
@@ -116,22 +118,28 @@ end
 
 subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),'argimport',flags,kv );
 
-%% Instruction
-infotext = ['Please press *spacebar* to play the sound as often as you want and answer the following question!\n\n',...
-  '(This screen remains displayed during stimulus presentation.)\n\n\n\n\n',...
+for pp = 1:Npos
+  sigpair{pp} = SpExCue_crossfade(subj.stim.sig{1,pp},subj.stim.sig{2,pp},...
+            subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
+end
+
+%% Movement?
+% Instruction
+infotext = [...
+  'You will hear three different sounds. The first one is coming from the right,\n\n',...
+  'the second from the front, and the third from the left.\n\n',...
+  'Please press *spacebar* to play each sound as often as you want and answer the following question! \n\n \n\n \n\n',...
   'Does the sound appear to move? If yes, does it move mainly in elevation or distance?\n\n',...
-  '(Elevation and distance are relative to the center of your head.)\n\n',...
+  '(Elevation and distance are considered relative to the center of your head.)\n\n',...
   '   Press *0* for no movement!\n\n', ...
   '   Press *1* for movement in elevation (upwards/downwards)! \n\n',...
-  '   Press *2* for movement in distance (closer/farther)!'];
+  '   Press *2* for movement in distance (closer/farther)! \n\n \n\n \n\n',...
+  'This screen remains displayed during stimulus presentation.'];
 DrawFormattedText(win,infotext,.2*x_center,'center',white);
 Screen('Flip',win);
 
-%% Play sounds
-response = cell(Npos,1);
+movement = cell(Npos,1);
 for pp = 1:Npos
-  sigpair = SpExCue_crossfade(subj.stim.sig{1,pp},subj.stim.sig{2,pp},...
-            subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
   keyCodeVal = 0;
   played = false;
   while not(any(keyCodeVal==[key.none,key.distance,key.elevation]) && played)
@@ -141,23 +149,23 @@ for pp = 1:Npos
     if keyCodeVal == key.play
       pause(.1)
       if flags.do_TDTon
-        myTDT.load_stimulus(sigpair);
+        myTDT.load_stimulus(sigpair{pp});
         myTDT.play_blocking()
       else
-        sound(sigpair,fs)
+        sound(sigpair{pp},fs)
       end
       played = true;
     end
   end
   
   if any(keyCodeVal==key.elevation)
-    response{pp} = 'elevation';
+    movement{pp} = 'elevation';
   elseif any(keyCodeVal==key.distance)
-    response{pp} = 'distance';
+    movement{pp} = 'distance';
   elseif keyCodeVal==key.none
-    response{pp} = 'none';
+    movement{pp} = 'none';
   else
-    response{pp} = 'NA';
+    movement{pp} = 'NA';
   end
   
   if pp < Npos
@@ -174,18 +182,78 @@ for pp = 1:Npos
   
 end
 
-azimuth = kv.azi(:);
-tab = table(azimuth,response);
 
+%% Ceck results and go on with distance if distance was reported for one or two directions
+distance = cell(Npos,1);
+
+distfalg = ismember(movement,'distance');
+if any(distfalg) && not(all(distfalg))
+
+  % Instruction 2: distance?
+    infotext2 = [...
+      'Now, listen to the same sounds again, but only focus on changes in distance and ignore other changes!\n\n',...
+      'Press *spacebar* to play the sound as often as you want and answer the following question!\n\n\n\n\n\n',...
+      'Does the sound change in distance?\n\n',...
+      '   Press *y* for YES!\n\n', ...
+      '   Press *n* for NO!'];
+    DrawFormattedText(win,infotext2,.2*x_center,'center',white);
+    Screen('Flip',win);
+    
+  % play sounds
+  for pp = 1:Npos
+      keyCodeVal = 0;
+      played = false;
+      while not(any(keyCodeVal==[key.yes,key.no]) && played)
+        [tmp,keyCode] = KbWait([],2);
+        keyCodeVal = find(keyCode,1);
+        disp(num2str(keyCodeVal))
+        if keyCodeVal == key.play
+          pause(.1)
+          if flags.do_TDTon
+            myTDT.load_stimulus(sigpair{pp});
+            myTDT.play_blocking()
+          else
+            sound(sigpair{pp},fs)
+          end
+          played = true;
+        end
+      end
+
+      if any(keyCodeVal==key.yes)
+        distance{pp} = 'yes';
+      elseif any(keyCodeVal==key.no)
+        distance{pp} = 'no';
+      else
+        distance{pp} = 'NA';
+      end
+
+      if pp < Npos
+        DrawFormattedText(win,'Next stimulus...',.2*x_center,'center',white);
+        Screen('Flip',win);
+        pause(1)
+        DrawFormattedText(win,infotext2,.2*x_center,'center',white);
+        Screen('Flip',win);
+      else
+        DrawFormattedText(win,'Thank you!',.2*x_center,'center',white);
+        Screen('Flip',win);
+        pause(1)
+      end
+
+  end
+  
+end
 %% Save results
+azimuth = kv.azi(:);
+tab = table(azimuth,movement,distance);
+
 savename = fullfile('data',[saveFileNamePrefix,'_',subj.ID,'_',saveFileNamePostfix]);
 if not(exist('./data','dir'))
   mkdir('data')
 end
 
 % introduce counter in filename for multiple runs of screening
-tmp = dir([savename,'*']);
-savename = [savename,num2str(length(tmp)+1)];
+% tmp = dir([savename,'*']);
+% savename = [savename,num2str(length(tmp)+1)];
 
 save(savename,'tab')
 

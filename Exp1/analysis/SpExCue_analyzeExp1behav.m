@@ -17,6 +17,8 @@ function [pFarther,stats,meta] = SpExCue_analyzeExp1behav(ID,fnext,plotflag,save
 %  meta:      .Dset: set of spectral contrast differences
 %             .position: azimuth 
 %             .positionLabel: corresponding position labels 
+%             .Mcomb: set undirected combinations of spectral contrasts 
+
 
 if not(exist('ID','var'))
   ID = input('ID: ','s');
@@ -135,7 +137,7 @@ for jj = 1:Ncond
   
   for dd = 1:length(Dset)
     idx = idCond & D == Dset(dd);
-    pFarther(dd,jj) = 100* sum(E(idx) == 1)/sum(idx);
+    pFarther(dd,jj) = 100* sum(E(idx) == 1)/sum(E(idx) ~= 0);
   end
   
   % Consistency
@@ -152,8 +154,8 @@ for jj = 1:Ncond
   
   % Sensitivity (hit defined as farther judgment if D > 0)
   idselect = idCond;
-  pHit = sum(D(idselect)>0 & E(idselect)>0) / sum(D(idselect)>0);
-  pFalseAlarm = sum(D(idselect)<0 & E(idselect)>0) / sum(D(idselect)<0);
+  pHit = sum(D(idselect)>0 & E(idselect)>0) / sum(D(idselect)>0 & E(idselect)~=0);
+  pFalseAlarm = sum(D(idselect)<0 & E(idselect)>0) / sum(D(idselect)<0 & E(idselect)~=0);
   pCorrect(jj,1) = nansum(subj.hit(idselect)) / sum(not(isnan(subj.hit(idselect))));
   zHit = norminv(pHit-eps,0,1);
   zFalseAlarm = norminv(pFalseAlarm+eps,0,1);
@@ -264,7 +266,7 @@ if saveflag
   end
   fn = fullfile(mfilename,[mfilename,'_',ID]);
   set(fig(1),'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
-  print(fig(1),Resolution,'-dpng',[fn,'_psyFct'])
+  print(fig(1),Resolution,'-dpng',[fn,'_psyFct','_',fnext])
   
 %   save(fn,'tabs','pFarther','R2','b')
   
@@ -272,7 +274,9 @@ if saveflag
 %   print(fig(2),Resolution,'-dpng',[fn,'_regress'])
 end
 
+meta.Mcomb = Mcomb;
 meta.Dset = Dset;
 meta.position = conditions;
 meta.positionLabel = PositionLabel(1:length(conditions));
+meta.Dlabels = Dlabels;
 end

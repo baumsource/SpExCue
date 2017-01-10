@@ -2,7 +2,7 @@
 
 saveflag = true;
 
-postfix = 'behav'; % famili, behav, or eeg
+postfix = 'eeg'; % famili, behav, or eeg
 tmp = load('SpExCue_Exp1eeg_subjects.mat');
 subject = tmp.subjects;% {'S01','S02','S03','S04'};
 
@@ -15,11 +15,13 @@ pFarther = nan(length(meta.Dset),length(meta.position),length(subject));
 dprime = nan(length(meta.position),length(subject));
 dprime_M = nan(length(meta.Mcomb),length(subject));
 bias = dprime;
+catchDetection = nan(length(subject),1);
 for ii = 1:length(subject)
   [pFarther(:,:,ii),stats] = SpExCue_analyzeExp1behav(subject{ii},postfix,0,0);
   dprime(:,ii) = stats.Pos.dprime;
   bias(:,ii) = stats.Pos.bias;
   dprime_M(:,ii) = stats.M.dprime;
+  catchDetection(ii) = stats.catch.dprime;
 end
 
 %% Plot

@@ -60,9 +60,9 @@ end
 switch flags.timeLock
 
   case 'Onset'
-    MlegendLabel = {'M_o = 1  ','M_o = 1/3','M_o = 0  '};
+    MlegendLabel = {'M1','Mi','M0'};
     timeLockedEventNum = {30,20,10};
-    M = [1,1/3,0];
+%     M = [1,1/3,0];
     
   case 'Change'
     
@@ -87,7 +87,12 @@ elseif flags.do_groupM
   
 elseif flags.do_groupE || flags.do_groupE_Mp3
   grouping = {5,6};
-  MlegendLabel = {'Closer','Farther'};
+  switch flags.timeLock
+    case 'Onset'
+      MlegendLabel = {'OnsetToCloser','OnsetToFarther'};
+    case 'Change'
+      MlegendLabel = {'Closer','Farther'};
+  end
   if flags.do_groupE_Mp3
     timeLockedEventNum = {32,12};
     flags.do_groupE = true;

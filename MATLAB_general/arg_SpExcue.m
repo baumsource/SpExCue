@@ -27,6 +27,7 @@ definput.flags.stimulation = {'binaural','monaural'};
 definput.flags.Mrepetition = {'repeateM','changeM'};
 definput.flags.positionOrderPermutation = {'completePosOrderPermutation','halfPosOrderPermutation'}; % randomized permutation of sequential order of positions either tested completely or only the first half
 definput.flags.roving = {'componentRove','pairRove','noRoving'};
+definput.flags.bandpass = {'butter','noBP'};
 definput.flags.familiarization = {'skipFamiliarization','familiarize'};
 definput.flags.feedback = {'blockedFeedback','TbTfeedback','noFeedback','consistencyFeedback','D0detectionFeedback'}; % Give feedback on trial-by-trial basis by changing fixation dot color
 definput.flags.tdt = {'TDTon','TDToff'};

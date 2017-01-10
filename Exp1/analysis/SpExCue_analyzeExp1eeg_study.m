@@ -1,18 +1,30 @@
-clear all
+clear
 
 %% Settings
 
 flags.do_blinkICrej = true;
-conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange'
-% designs for 'Mchange': 
-% 1: all, 
-% 2: M1-0vsM0-1, 3: M1-ivsMi-1, 4: Mi-0vsM0-i, 5: M1-ivsM0-i, 6: D<0vsD>0
-% 7: M1-0vsMi-0, 8: M0-1vsMi-1, 9: M0-ivsM1-i
-design = 6;
+conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCloserVsFarther'
+% all: 1
+% grand average: 2
+% additional designs for 'Mchange': 
+% 3: M1-0vsM0-1, 4: M1-ivsMi-1, 5: Mi-0vsM0-i, 6: M1-ivsM0-i, 7: D<0vsD>0
+% 8: M1-0vsMi-0, 9: M0-1vsMi-1, 10: M0-ivsM1-i
+% 11: all with D=0 collapsed, 12: Mi-1vsMi-0 (no prior expectation)
+% 13: all except D=0
+design = 13;
+
+% Statistical analysis
+stats.mcorrect = 'none'; % 'none' or 'MonteCarloCluster'
+
+% Plots
+plotflag.topo = true;
+plotflag.erp = true;
+plotflag.compAmp = true;
+flags.do_print = false;
 
 % Precomp settings
 precomp.redo = 'off';
-precomp.data = 'channels'; % 'components' or 'channels'
+precomp.data = 'components'; % 'components' or 'channels'
 precomp.erp = 'on';
 precomp.scalp = 'on';
 precomp.spec = 'off';
@@ -26,24 +38,27 @@ erspparams = { 'cycles', [2,10], 'freqs', [2 20],'nfreqs',10,...
 flags.do_cluster = strcmp(precomp.data,'components'); % always cluster in case of component-based analysis
 flags.do_channels = not(flags.do_cluster);
 preclustsetting = {...
-  {'erp' 'npca' 5 'norm' 1 'weight' 1 'timewindow' [-200 800]},...
-  {'scalp' 'npca' 5 'norm' 1 'weight' 1},...
-  {'spec' 'npca' 5 'norm' 1 'weight' 1 'freqrange' [2 20]}};
-  % 	{'ersp' 'npca' 10 'norm' 1 'weight' 1}
-  % 	{'dipoles' 'norm' 1 'weight' 10} , ... 
-clus_num = 12; % number of clusters
-
-% Statistical analysis
-stats.mcorrect = 'none'; % 'none' or 'MonteCarloCluster'
-
-% Plots
-plotflag.topo = false;
-plotflag.erp = true;
-plotflag.corr = true;
-flags.do_print = true;
+  {'dipoles' 'norm' 0 'weight' 1} ; ... 
+%   {'erp' 'npca' 5 'norm' 1 'weight' 1 'timewindow' [0 400]};...
+%   {'scalp' 'npca' 5 'norm' 1 'weight' 0};...
+%   {'spec' 'npca' 5 'norm' 1 'weight' 1 'freqrange' [2 20]};...
+% 	{'ersp' 'npca' 10 'norm' 1 'weight' 1};...
+  };
+clus_num = 8; % number of clusters
 
 % Data
 filepath = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Exp1/data';
+
+% component amplitudes
+compLabel = {'N1','P2'};
+switch conditionSet% extracted from Cz grand average ERP
+  case {'Onset' , 'OnsetToCloserVsFarther'}
+    compWin = {[80,140],[140,280]}; 
+    ylimTopo = 4*[-1,+1];
+  case {'Mchange' , 'CloserVsFarther'}
+    compWin = {[90,150],[150,290]}; 
+    ylimTopo = 2*[-1,+1];
+end
 
 %% Subjects and data files
 
@@ -67,9 +82,13 @@ end
 
 fnStudy = strrep(fnX,'Sxx','ALL');
 fnStudy = strrep(fnStudy,'Cxx',conditionSet);
-fnStudy = strrep(fnStudy,'set','study');
+fnStudy = strrep(fnStudy,'.set','.study');
   
 switch conditionSet
+  case 'Onset'
+    condition = {'M1','Mi','M0'};
+  case 'OnsetToCloserVsFarther'
+    condition = {'OnsetToCloser','OnsetToFarther'};
   case 'Mchange'
     condition = {'M1-0','M1-i','Mi-0','M0-0','Mi-i','M1-1','M0-i','Mi-1','M0-1'};
   case 'CloserVsFarther'
@@ -78,10 +97,10 @@ switch conditionSet
     error('RB: Check conditionSet!')
 end
 
-if exist(fullfile(filepath,fnStudy),'file')
+if exist(fullfile(filepath,fnStudy),'file') && strcmp(precomp.redo,'off')
   
-  [STUDY ALLEEG] = pop_loadstudy('filename', fnStudy,'filepath',filepath);
-  STUDY.currentdesign = design;
+  [STUDY,ALLEEG] = pop_loadstudy('filename', fnStudy,'filepath',filepath);
+%   STUDY.currentdesign = design;
   
 else
 
@@ -94,43 +113,48 @@ else
       fn{ii} = strrep(fnX,'Sxx',subject{ss});
       fn{ii} = strrep(fn{ii},'Cxx',condition{cc});
       commands{ii} = { 'index' ii 'load' fullfile(filepath,fn{ii}),...
-        'subject' subject{ss} 'condition' condition{cc} };
+        'subject' subject{ss} 'condition' condition{cc}};
     end
   end
 
   % Save
   [STUDY,ALLEEG] = std_editset([],[],'commands',commands,'name','SpExCue',...
     'task', 'closer vs. farther for second of two consecutive noise bursts'); 
+  [STUDY,ALLEEG] = std_editset(STUDY, ALLEEG,... % apply dipfit residual var threshold of 15%
+    'commands',{{'inbrain' 'on' 'dipselect' 0.15}},'updatedat','on','rmclust','off' );
   STUDY.design(1).name = 'all';
 
+  % Create additional designs
+  STUDY = std_makedesign(STUDY, ALLEEG, 2, 'name', 'grandAvg',...
+    'variable1', 'condition','subjselect',subject,'values1',{condition});
   if strcmp(conditionSet,'Mchange')
-    % Create additional designs
-    STUDY = std_makedesign(STUDY, ALLEEG, 2, 'name', 'M1-0vsM0-1',...
-      'variable1', 'condition', 'values1',{'M1-0','M0-1'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 3, 'name', 'M1-ivsMi-1',...
-      'variable1', 'condition', 'values1',{'M1-i','Mi-1'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 4, 'name', 'Mi-0vsM0-i',...
-      'variable1', 'condition', 'values1',{'Mi-0','M0-i'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 5, 'name', 'M1-ivsM0-i',...
-      'variable1', 'condition', 'values1',{'M1-i','M0-i'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 6, 'name', 'D<0vsD>0','subjselect',subject,...
-      'variable1', 'condition', 'values1',{{'M1-i','M1-0','Mi-0'},{'Mi-1','M0-1','M0-i'}});
-    STUDY = std_makedesign(STUDY, ALLEEG, 7, 'name', 'M1-0vsMi-0',...
-      'variable1', 'condition', 'values1',{'M1-0','Mi-0'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 8, 'name', 'M0-1vsMi-1',...
-      'variable1', 'condition', 'values1',{'M0-1','Mi-1'},'subjselect',subject);
-    STUDY = std_makedesign(STUDY, ALLEEG, 9, 'name', 'M0-ivsM1-i',...
-      'variable1', 'condition', 'values1',{'M0-i','M1-i'},'subjselect',subject); 
-    STUDY.currentdesign = design;
+    MchangeDesigns = {'M1-0vsM0-1',{'M1-0','M0-1'};...
+      'M1-ivsMi-1',{'M1-i','Mi-1'};...
+      'Mi-0vsM0-i',{'Mi-0','M0-i'};...
+      'M1-ivsM0-i',{'M1-i','M0-i'};...
+      'D<0vsD>0',{{'M1-i','M1-0','Mi-0'},{'Mi-1','M0-1','M0-i'}};...
+      'M1-0vsMi-0',{'M1-0','Mi-0'};...
+      'M0-1vsMi-1',{'M0-1','Mi-1'};...
+      'M0-ivsM1-i',{'M0-i','M1-i'};...
+      'all_D0pooled',{'M1-i','M1-0','Mi-0','Mi-1','M0-1','M0-i',{'M0-0','Mi-i','M1-1'}};...
+      'Mi-1vsMi-0',{'Mi-1','Mi-0'};...
+      'noD0',{'M1-i','M1-0','Mi-0','Mi-1','M0-1','M0-i'}};
+    for dd = 1:length(MchangeDesigns)
+      STUDY = std_makedesign(STUDY, ALLEEG, dd+2, 'name',MchangeDesigns{dd,1},...
+        'variable1', 'condition', 'values1',MchangeDesigns{dd,2},'subjselect',subject);
+    end
+      
   end
 
   % Save
   [STUDY, ALLEEG] = std_editset(STUDY, ALLEEG,'filename', fnStudy,'filepath',filepath);
   
 end
+[STUDY] = std_selectdesign(STUDY, ALLEEG, design);
+% STUDY.currentdesign = design;
 
 % update workspace variables and redraw EEGLAB window
-CURRENTSTUDY = 1; EEG = ALLEEG; CURRENTSET = [1:length(EEG)];
+% CURRENTSTUDY = 1; EEG = ALLEEG; CURRENTSET = 1:length(EEG);
 [STUDY, ALLEEG] = std_checkset(STUDY, ALLEEG);
 eeglab redraw
 
@@ -152,7 +176,7 @@ precompsettings = {'interp', 'on', 'recompute', precomp.redo,...
   'erp', precomp.erp, 'erpparams', erpparams,...
   'spec', precomp.spec, 'specparams', specparams,...
   'ersp', precomp.ersp, 'itc', precomp.ersp, 'erspparams', erspparams};
-[STUDY ALLEEG] = std_precomp(STUDY, ALLEEG, precomp.data,precompsettings{:});
+[STUDY,ALLEEG] = std_precomp(STUDY, ALLEEG, precomp.data,precompsettings{:});
 
 if flags.do_cluster
   % Clusstering based on scalp map correlation to a specified template
@@ -160,10 +184,10 @@ if flags.do_cluster
 %   [correlationMap,STUDY,ALLEEG] = corrmap(STUDY,ALLEEG,1,6,'th','.75');
   
   % Preclustering
-  [STUDY ALLEEG] = std_preclust(STUDY, ALLEEG, [], preclustsetting{:});
+  [STUDY,ALLEEG] = std_preclust(STUDY, ALLEEG, [], preclustsetting{:});
 
   % Clustering
-  [STUDY ALLEEG] = pop_clust(STUDY, ALLEEG,'algorithm','kmeans',...
+  [STUDY,ALLEEG] = pop_clust(STUDY, ALLEEG,'algorithm','kmeans',...
     'clus_num',clus_num,'outliers',3);
 end
 
@@ -179,12 +203,6 @@ switch stats.mcorrect
       'fieldtripmethod','montecarlo','fieldtripmcorrect','cluster');
 end
 
-%% Explore clusters
-if flags.do_cluster
-  pop_clustedit(STUDY,ALLEEG);
-  pause
-end
-
 %% ERP analysis
 if flags.do_channels
   
@@ -198,37 +216,40 @@ if flags.do_channels
   
   iERPmax = 32; % Cz (evaluated by code above)
   chanLabel = ChanLbls(iERPmax);
-  peakTimes = [120,220]; % extracted from Cz grand average ERP
-  timeRange = 50;
-  compLabel = {'N1','P2'};
   
   figERP = [];
   if plotflag.erp
     STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
-      'timerange',[-200,800],'averagechan','on','topotime',[]);
+      'timerange',[-200,600],'averagechan','on','topotime',[]);
     
     [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',chanLabel);
-    figERP = gcf;
+    figERP(1) = gcf;
 
-    % BUG: EEGlab does not plot wave forms for fixed alpha in statparams ->
-    % workaround with alpha = nan in statparams:
-    alpha = .05;
-    tsigdiff = erptimes(pcond{1} < alpha); % sig. diff. time instances 
-    delete(subplot(122));
-    pos = get(subplot(121),'Position');
-    set(subplot(121),'Position',pos.*[1,1,2,1])
-    YLim = get(gca,'YLim');
-    hold on
-    plot(tsigdiff,(YLim(1)+.1*diff(YLim))*ones(length(tsigdiff),1),'r.')
+    if length(pcond) >= 1
+      % BUG: EEGlab does not plot wave forms for fixed alpha in statparams ->
+      % workaround with alpha = nan in statparams:
+      alpha = .05;
+      tsigdiff = erptimes(pcond{1} < alpha); % sig. diff. time instances 
+      delete(subplot(122));
+      pos = get(subplot(121),'Position');
+      set(subplot(121),'Position',pos.*[1,1,2,1])
+      YLim = get(gca,'YLim');
+      hold on
+      plot(tsigdiff,(YLim(1)+.1*diff(YLim))*ones(length(tsigdiff),1),'r.')
+    end
+    
+    std_plotcurve(erptimes, erpdata, 'plotconditions', 'together',...
+      'plotstderr', 'on', 'figure', 'on');
+    figERP(2) = gcf;
+    
   end
   
   figTopo = [];
   if plotflag.topo
     STUDY = pop_erpparams(STUDY, 'plotconditions', 'apart','averagechan','off');
-    for ii = 1:length(peakTimes)
-      topotime = peakTimes(ii) + timeRange*[-1,1];
+    for ii = 1:length(compWin)
       [STUDY, C(ii).erpdata, ~, ~, C(ii).pcond] = std_erpplot(STUDY,ALLEEG,...
-        'channels',ChanLbls(1:32), 'topotime',topotime,'ylim',[-2,2]);
+        'channels',ChanLbls(1:32), 'topotime',compWin{ii},'ylim',ylimTopo);
       figTopo(ii) = gcf;
     end
 %     topotimeLabel = [num2str(tsigdiff(1),'%u'),'-',num2str(tsigdiff(end),'%u'),'ms'];
@@ -238,91 +259,203 @@ if flags.do_channels
 %     figTopo = gcf;
   end
   
-  figCorr = [];
-  if plotflag.corr
+  figComp = [];
+  if plotflag.compAmp
     
     [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,...
       'channels',ChanLbls(iERPmax),'noplot','on');
     
     behav = load('SpExCue_analyzeExp1behav_avg_eeg.mat');
       
-    compAmp = nan(length(erpdata),length(STUDY.subject),length(peakTimes));
-    for ii = 1:length(peakTimes) % N1 and P2
+    condLbl = STUDY.design(design).variable(1).value(:); % condition labels
+    compAmp = nan(length(erpdata),length(STUDY.subject),length(compWin));
+    for ii = 1:length(compWin) % N1 and P2
       
-      timeBounds = peakTimes(ii)+timeRange*[-1,1]; % ms
-      iComp = erptimes >= timeBounds(1) & erptimes <= timeBounds(2);
+      iComp = erptimes >= compWin{ii}(1) & erptimes <= compWin{ii}(2);
       for jj=1:length(erpdata)
         compAmp(jj,:,ii) = mean(erpdata{jj}(iComp,:));
       end
       
-%       x = -diff(compAmp(:,:,ii))./mean(compAmp(:,:,ii)); % amplitude difference normalized by mean amplitude
-% %       y = nanmean(behav.dprime);
-%       y = nanmean(behav.bias);
-%       [B,BINT,R,RINT,STATS] = regress(y(:),[ones(length(x),1),x(:)]);
-%       r = sqrt(STATS(1));
-%       p = STATS(3);
-%       
-%       figCorr(ii) = figure;
-%       symb = '<s>';
-%       legLbl = {'left','front','right'};
-%       for pp = 1:size(behav.dprime,1) % directions
-%         idir = not(isnan(behav.dprime(pp,:)));
-%         h(pp) = plot(x(idir),y(idir),['k',symb(pp)]);
-%         hold on
-%       end
-%       set(h,'MarkerFaceColor','k')
-%       yRegress = B(1) + B(2)*x;
-%       plot(x,yRegress,'k')
-%       title([STUDY.design(design).name,', r = ',num2str(r,'%1.2f'),', p = ',num2str(p,'%1.2f')])
-%       ylabel('bias towards closer (c)')
-%       xlabel('Normalized P2 amplitude difference (µV)')
-%       legend(legLbl,'Location','northwest')
+      if length(erpdata) == 2
+        [h,p,ci,stats] = ttest(compAmp(1,:,ii),compAmp(2,:,ii));
+        disp([compLabel{ii},', ',STUDY.design(design).name,': ',...
+          't = ',num2str(stats.tstat,'%1.2f'),', p = ',num2str(p,'%1.5f')])
+        
+      elseif length(erpdata) > 2
+      
+        t = array2table(compAmp(:,:,ii)');
+        
+        if strcmp(conditionSet,'Mchange') && ismember(STUDY.design(design).name,{'noD0'})
+          direction(ismember(condLbl,{'M1-0','M1-i','Mi-0'})) = {'decrease'};
+          direction(ismember(condLbl,{'M0-1','Mi-1','M0-i'})) = {'increase'};
+          direction(ismember(condLbl,{'M0-0','Mi-i','M1-1'})) = {'constant'};
+          
+          combination(ismember(condLbl,{'M1-0','M0-1'})) = {'0,1'};
+          combination(ismember(condLbl,{'M0-i','Mi-0'})) = {'0,i'};
+          combination(ismember(condLbl,{'Mi-1','M1-i'})) = {'i,1'};
+          
+          figComp(ii) = figure; 
+          idsort = [2,1,3,5,4,6];
+          compAmpWithin = compAmp-repmat(mean(compAmp),[size(compAmp,1),1,1]);
+          boxplot(compAmpWithin(idsort,:,ii)',{direction(idsort),combination(idsort)})
+          ylabel(['Within-subject ',compLabel{ii},' amplitude difference (µV)'])
+          
+          within = table(direction(:),combination(:),'VariableNames',{'direction','combination'});
+          rm = fitrm(t,['Var1-Var' num2str(size(compAmp,1)) ' ~ 1'],'WithinDesign',within);
+          [tbl.ranova,~,C,~] = ranova(rm,'WithinModel','direction*combination');
+        else
+          within = table(condLbl,'VariableNames',{conditionSet});
+          rm = fitrm(t,['Var1-Var' num2str(size(compAmp,1)) ' ~ 1'],'WithinDesign',within);
+          [tbl.ranova,~,C,~] = ranova(rm);
+        end
+        
+        tbl.ranova.Properties.RowNames = strrep(tbl.ranova.Properties.RowNames,'(Intercept):','');
+    
+        % Mauchly's test for sphericity
+%         tbl.mauchly = mauchly(rm,C);
+%         tbl.mauchly.Properties.RowNames = tbl.ranova.Properties.RowNames(1:2:end);
+    
+        % Sphericity corrections
+        tbl.eps = epsilon(rm,C);
+%         tbl.eps.Properties.RowNames = tbl.ranova.Properties.RowNames(1:2:end);
+    
+        % Add corrected DFs to ranova table
+        idrep = round(0.5:0.5:length(tbl.eps.GreenhouseGeisser)); % repeat iteratively
+        tbl.ranova.DFGG = tbl.ranova.DF .* ...
+          reshape(tbl.eps.GreenhouseGeisser(idrep),size(tbl.ranova.DF));
+    
+        % Add effect sizes to ranova table
+        SSeffect = tbl.ranova.SumSq(1:2:end);
+        SSerror = tbl.ranova.SumSq(2:2:end);
+        eta_pSq = nan(2*length(SSerror),1);
+        eta_pSq(1:2:end) = SSeffect./(SSeffect+SSerror); % effect size per (eta_partial)^2
+        tbl.ranova.eta_pSq = eta_pSq;
+        
+        % Display results
+        disp(['Repeated-measures ANOVA for ' compLabel{ii},' (',STUDY.design(design).name,')'])
+        disp(tbl.ranova)
+%         disp('Mauchly test and sphericity corrections')
+%         disp([tbl.mauchly,tbl.eps])
+    
+        % Post-hoc analysis
+        if any(tbl.ranova.pValueGG(1:2:end) < .05)
+          disp('Posthoc analysis')
+          if exist('direction','var')
+            if tbl.ranova.pValueGG(3) < .05
+              tbl.posthoc.direction = multcompare(rm,'direction');
+              disp(tbl.posthoc.direction)
+            end
+            if tbl.ranova.pValueGG(5) < .05
+              tbl.posthoc.combination = multcompare(rm,'combination');
+              disp(tbl.posthoc.combination)
+            end
+          else
+            tbl.posthoc = multcompare(rm,{conditionSet});
+            disp(tbl.posthoc)
+          end
+        end
+        
+      end
       
     end
-    
-%     N1range = 120+50*[-1,1]; % ms
-%     P2range = 220+50*[-1,1]; % ms
-%     Xrange = [140,190]; % ms
-%     iN1 = erptimes >= N1range(1) & erptimes <= N1range(2);
-%     iX = erptimes >= Xrange(1) & erptimes <= Xrange(2);
-%     iP2 = erptimes >= P2range(1) & erptimes <= P2range(2);
-%     for ii=1:length(erpdata)
-%       N1(ii,:) = mean(erpdata{ii}(iN1,:));
-%       X(ii,:) = mean(erpdata{ii}(iX,:));
-%       P2(ii,:) = mean(erpdata{ii}(iP2,:));
-%     end
-%     R=0:10:100; for jj=1:length(R); P2range = 220+R(jj)*[-1,1]; iP2 = erptimes >= P2range(1) & erptimes <= P2range(2); for ii=1:length(erpdata); P2(ii,:) = mean(erpdata{ii}(iP2,:)); end; [h(jj),p(jj)]=ttest(diff(P2)); end
-%     [h,p] = ttest(diff(P2))
-
-    
-%     [r,p] = corrcoef(-diff(P2)./mean(P2),nanmean(behav.dprime));
-%     figure; scatter(-diff(P2)./mean(P2),nanmean(behav.dprime)); 
-%     title([STUDY.design(design).name,', r = ',num2str(r(2),'%1.2f'),', p = ',num2str(p(2),'%1.2f')])
-%     ylabel('dprime')
-%     xlabel('Normalized P2 amplitude difference (µV)')
   end
   
 end
 
 %% IC cluster analysis
 
+% Explore clusters
+% if flags.do_cluster
+%   pop_clustedit(STUDY,ALLEEG);
+%   pause
+% end
+
 if flags.do_cluster
 
   % plot topographies
   std_topoplot(STUDY,ALLEEG,'clusters',3:length(STUDY.cluster));
   figTopo = gcf;
+  
+  % plot dipole locations
+  std_dipplot(STUDY,ALLEEG,'clusters',2:length(STUDY.cluster)); % including outlier cluster
+  figDip = gcf;
 
-  % plot ERPs
+  %% plot ERPs
   if plotflag.erp
     STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
-      'timerange',[-200,800],'averagechan','on','topotime',[]);
+      'timerange',[-200,600],'averagechan','on','filter',20);
     alpha = .05;
     for jj=3:length(STUDY.cluster)
       [STUDY, erpdata, erptimes, ~, pcond] = std_erpplot(...
             STUDY,ALLEEG,'clusters',jj);
+      figERP(jj-2) = gcf;
+      title(STUDY.cluster(jj).name)
     end
   end
-
+  
+  %% evaluate time-windowed activity
+  if plotflag.compAmp
+    
+    P2 = cell(length(STUDY.cluster),1);
+    for jj=1:length(STUDY.cluster)
+      idt = STUDY.cluster(jj).erptimes >= compWin{2}(1) & ...
+            STUDY.cluster(jj).erptimes <= compWin{2}(2);
+      for ee=1:length(STUDY.cluster(jj).erpdata)
+        P2{jj}(ee,:) = rms(STUDY.cluster(jj).erpdata{ee}(idt,:));
+      end
+    end
+      
+    % Statistics
+    % within-model definition for rm ANOVA
+    if strcmp(conditionSet,'Mchange') && ismember(STUDY.design(design).name,{'noD0'})
+      condLbl = STUDY.design(design).variable(1).value(:); % condition labels
+      direction(ismember(condLbl,{'M1-0','M1-i','Mi-0'})) = {'decrease'};
+      direction(ismember(condLbl,{'M0-1','Mi-1','M0-i'})) = {'increase'};
+      direction(ismember(condLbl,{'M0-0','Mi-i','M1-1'})) = {'constant'};
+      combination(ismember(condLbl,{'M1-0','M0-1'})) = {'0,1'};
+      combination(ismember(condLbl,{'M0-i','Mi-0'})) = {'0,i'};
+      combination(ismember(condLbl,{'Mi-1','M1-i'})) = {'i,1'};
+      combination(ismember(condLbl,{'M0-0'})) = {'0,0'};
+      combination(ismember(condLbl,{'Mi-i'})) = {'i,i'};
+      combination(ismember(condLbl,{'M1-1'})) = {'1,1'};
+      within = table(direction(:),combination(:),'VariableNames',{'direction','combination'});
+    end
+      
+    for jj=1:length(STUDY.cluster)
+      if length(STUDY.cluster(jj).erpdata) == 2
+        [h(jj),p(jj)] = ttest(P2{jj}(1,:),P2{jj}(2,:));
+        
+      elseif exist('within','var') && size(P2{jj},1) == length(within.direction)
+        
+        t = array2table(P2{jj}');
+        
+        rm = fitrm(t,['Var1-Var' num2str(size(P2{jj},1)) ' ~ 1'],'WithinDesign',within);
+        [tbl.ranova,~,C,~] = ranova(rm,'WithinModel','direction*combination');
+        
+        tbl.ranova.Properties.RowNames = strrep(tbl.ranova.Properties.RowNames,'(Intercept):','');
+    
+        % Sphericity corrections
+        tbl.eps = epsilon(rm,C);
+    
+        % Add corrected DFs to ranova table
+        idrep = round(0.5:0.5:length(tbl.eps.GreenhouseGeisser)); % repeat iteratively
+        tbl.ranova.DFGG = tbl.ranova.DF .* ...
+          reshape(tbl.eps.GreenhouseGeisser(idrep),size(tbl.ranova.DF));
+    
+        % Add effect sizes to ranova table
+        SSeffect = tbl.ranova.SumSq(1:2:end);
+        SSerror = tbl.ranova.SumSq(2:2:end);
+        eta_pSq = nan(2*length(SSerror),1);
+        eta_pSq(1:2:end) = SSeffect./(SSeffect+SSerror); % effect size per (eta_partial)^2
+        tbl.ranova.eta_pSq = eta_pSq;
+        
+        % Display results
+%         disp(['Repeated-measures ANOVA for ',STUDY.cluster(jj).name,' (',STUDY.design(design).name,')'])
+%         disp(tbl.ranova)
+        p(jj) = tbl.ranova.pValue(3);
+      end
+    end
+  end
 end
 
 %% Topographic analysis 
@@ -410,14 +543,15 @@ disp(NtrialsTab)
 if flags.do_print 
   FontSize = 8;
   Resolution = '-r600';
-  set(findall([figTopo,figERP,figCorr],'-property','FontSize'),'FontSize',FontSize)
+  set(findall([figTopo,figERP,figComp],'-property','FontSize'),'FontSize',FontSize)
 
   if not(exist(mfilename,'dir'))
     mkdir(mfilename)
   end
 
-  set(figTopo,'PaperUnits','centimeters','PaperPosition',[100,100,20,5])
+  set(figTopo,'PaperUnits','centimeters')
   for ii = 1:length(figTopo)
+    set(figTopo(ii),'PaperPosition',[100,100,7*(length(get(figTopo(ii),'Children'))-1),5])
     fn = fullfile(mfilename,['topo_',compLabel{ii},'_',conditionSet,'_',STUDY.design(design).name]);
     print(figTopo(ii),Resolution,'-dpng',fn)
     saveas(figTopo(ii),fn)
@@ -425,20 +559,24 @@ if flags.do_print
 
   set(figERP,'PaperUnits','centimeters','PaperPosition',[100,100,12,8])
   for ii = 1:length(figERP)
-    fn = fullfile(mfilename,['erp_',chanLabel{ii},'_',conditionSet,'_',STUDY.design(design).name]);
+    fn = fullfile(mfilename,['erp_',chanLabel{1},'_',conditionSet,'_',STUDY.design(design).name]);
+    if ii == 2
+      fn = [fn,'_stderr'];
+    end
     print(figERP(ii),Resolution,'-dpng',fn)
     saveas(figERP(ii),fn)
   end
 
-%   set(figCorr,'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
-%   for ii = 1:length(figCorr)
-%     fn = fullfile(mfilename,['corr_dprime-',compLabel{ii},'AmpDiff_',conditionSet,'_',STUDY.design(design).name]);
-%     print(figCorr(ii),Resolution,'-dpng',fn)
-%     saveas(figCorr(ii),fn)
-%   end
-  if plotflag.corr
-    fn = fullfile(mfilename,['compAmp_',conditionSet,'_',STUDY.design(design).name]);
-    save(fn,'compAmp')
+  set(figComp,'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
+  for ii = 1:length(figComp)
+    fn = fullfile(mfilename,[compLabel{ii},conditionSet,'_',STUDY.design(design).name]);
+%     print(figComp(ii),Resolution,'-dpng',fn)
+    saveas(figComp(ii),fn)
+    saveas(figComp(ii),[fn,'.eps'])
+  end
+  if plotflag.compAmp
+    fn = fullfile(mfilename,['compAmp_',chanLabel{1},'_',conditionSet,'_',STUDY.design(design).name]);
+    save(fn,'compAmp','condLbl')
   end
   
 end

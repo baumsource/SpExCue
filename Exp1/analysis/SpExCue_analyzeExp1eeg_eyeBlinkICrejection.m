@@ -38,7 +38,7 @@ ICA = load(fullfile(filepath,ICAfn));
 
 %% Select components to remove
 pop_eegplot( EEG, 0, 1, 1, [], 'winlength',10,'events','off');
-pop_selectcomps(EEG,1:18);
+pop_selectcomps(EEG,1:18); % does not work properly because EEG.icaact is empty (but I don't know why it is?!?)
 
 %% Remove IC representing eye blinks
 ICA.paramsOut.indICrej = 0;

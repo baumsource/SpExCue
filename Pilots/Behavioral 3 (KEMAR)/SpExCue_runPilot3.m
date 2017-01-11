@@ -9,12 +9,12 @@ function SpExCue_runPilot3(ID)
 % AUTHOR: Robert Baumgartner
 
 %% Experimental variables
-azi = [90,0,-90];
-ele = [0,0,0];
+azi = 90;%[90,0,-90];
+ele = 0;%[0,0,0];
 M = [1,.75,.5,.25,0]; % NOTE that 0.75 will be replaced by KEMAR
-Nrep = 3; % repetitions
-flow = 700; % lower cut-off frequency
-fhigh = 18000; % upper cut-off frequency
+Nrep = 6; % repetitions
+flow = 1e3; % lower cut-off frequency
+fhigh = 16e3; % upper cut-off frequency
 dur = 1.6; % duration of stimulus pair in sec
 durfade = 0.05; % duration of fade-in/out in sec
 jitter = 0.1; % temporal jitter in sec
@@ -255,7 +255,7 @@ for irep = 1:Nrep
 
       % spectral roving
       subj.rphase(ii) = 2*pi*rand;
-      sigpair = SpExCue_spectralRipple(sigpair,subj.stim.fs,rdepth,rdensity,subj.rphase(ii),'oct');
+      sigpair = SpExCue_spectralRipple(sigpair,subj.stim.fs,rdepth,rdensity,subj.rphase(ii),flow,fhigh,'oct');
 
       tic;
       sound(sigpair,subj.stim.fs)

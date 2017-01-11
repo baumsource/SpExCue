@@ -13,10 +13,13 @@ function [pFarther,stats,meta] = SpExCue_analyzeExp1behav(ID,fnext,plotflag,save
 %  pFarther:  percentage of "farther" judgments
 %  stats:     .Pos: dprime, bias, pCorrect, R2, and consistency for
 %                   different positions
-%             .M: dprime for different combinations of spectral contrasts 
+%             .M: dprime for different combinations of spectral contrasts
+%             .catchTrial: dprime for catch trials 
 %  meta:      .Dset: set of spectral contrast differences
 %             .position: azimuth 
 %             .positionLabel: corresponding position labels 
+%             .Mcomb: set undirected combinations of spectral contrasts 
+
 
 if not(exist('ID','var'))
   ID = input('ID: ','s');
@@ -37,14 +40,14 @@ end
 %% Load data
 tmp = load(fullfile('..','data',['Exp1behav_' ID,'_',fnext]));
 subj = tmp.subj;
-pos = unique(subj.pos(:,1));
-Npos = length(pos);
-conditions = {'left','front','right'};
-PositionLabel = conditions;
+% pos = unique(subj.pos(:,1));
+positions = {'left','front','right'};
+Npos = length(positions);
+PositionLabel = positions;
 PositionColors = 'bgr';
 % if Npos > 1 % only one direction
 %   for ii = 1:Npos
-%     conditions{ii+1} = pos(ii,1);
+%     positions{ii+1} = pos(ii,1);
 %     if pos(ii,1) < 0
 %       PositionLabel{ii+1} = 'right';
 %     elseif pos(ii,1) == 0
@@ -56,7 +59,6 @@ PositionColors = 'bgr';
 %     end
 %   end
 % end
-Ncond = length(conditions);
 
 if any(subj.Mcomb == .5)
   subj.Mcomb(subj.Mcomb == .5) = 2/3;
@@ -77,33 +79,33 @@ I = -diff(subj.SPL,1,2); % intensity difference
 E = subj.E; 
 
 %% Regression models and psychometrics for different directions
-R2 = nan(length(conditions),1);
-p = nan(length(conditions),1);
-dprime = nan(length(conditions),1);
-bias = nan(length(conditions),1);
-pCorrect = nan(length(conditions),1);
-consistency = nan(length(conditions),1);
-pFarther = nan(length(Dset),length(conditions));
-idplot = false(length(conditions),1);
-for jj = 1:Ncond
+R2 = nan(Npos,1);
+p = nan(Npos,1);
+dprime = nan(Npos,1);
+bias = nan(Npos,1);
+pCorrect = nan(Npos,1);
+consistency = nan(Npos,1);
+pFarther = nan(length(Dset),Npos);
+idplot = false(Npos,1);
+for jj = 1:Npos
 
   % select stimulus condtion
-  switch conditions{jj}
+  switch positions{jj}
     case 'left'
-      idCond = subj.pos(:,1) > 0;
+      idPos = subj.pos(:,1) > 0;
     case 'front'
-      idCond = subj.pos(:,1) == 0;
+      idPos = subj.pos(:,1) == 0;
     case 'right'
-      idCond = subj.pos(:,1) < 0;
+      idPos = subj.pos(:,1) < 0;
   end
   
-  if any(idCond) == 0
+  if any(idPos) == 0
     continue
   end
 
 %   % exclude same-M trials
   idMdiff = D ~= 0;
-  idCondMdiff = idCond & idMdiff;
+  idPosMdiff = idPos & idMdiff;
   
   % Correlation Analysis
   y = zscore(E(:));
@@ -112,8 +114,8 @@ for jj = 1:Ncond
   else
     X = [ones(length(E),1),zscore([D(:),I(:)])];
   end
-  y = y(idCondMdiff);
-  X = X(idCondMdiff,:);
+  y = y(idPosMdiff);
+  X = X(idPosMdiff,:);
 
   [b(jj,:),bint(jj,:,:),r,rint,stats] = regress(y,X);
   R2(jj) = stats(1);
@@ -134,8 +136,8 @@ for jj = 1:Ncond
   % Psychometric function
   
   for dd = 1:length(Dset)
-    idx = idCond & D == Dset(dd);
-    pFarther(dd,jj) = 100* sum(E(idx) == 1)/sum(idx);
+    idx = idPos & D == Dset(dd);
+    pFarther(dd,jj) = 100* sum(E(idx) == 1)/sum(E(idx) ~= 0);
   end
   
   % Consistency
@@ -143,20 +145,20 @@ for jj = 1:Ncond
   NiU = zeros(length(Uset),1);
   consistencyCounter = zeros(length(Uset),1);
   for uu = 1:length(Uset)
-    iU = (abs(D) == Uset(uu)) & idCondMdiff;
+    iU = (abs(D) == Uset(uu)) & idPosMdiff;
     NiU(uu) = sum(iU);
     consistencyCounter(uu) = abs(sum(E(iU).*sign(D(iU))));
   end
   Nchange(jj) = sum(NiU);
   consistency(jj) = 100* sum(consistencyCounter) / Nchange(jj);
   
+  pCorrect(jj,1) = nansum(subj.hit(idPos)) / sum(not(isnan(subj.hit(idPos))));
+  
   % Sensitivity (hit defined as farther judgment if D > 0)
-  idselect = idCond;
-  pHit = sum(D(idselect)>0 & E(idselect)>0) / sum(D(idselect)>0);
-  pFalseAlarm = sum(D(idselect)<0 & E(idselect)>0) / sum(D(idselect)<0);
-  pCorrect(jj,1) = nansum(subj.hit(idselect)) / sum(not(isnan(subj.hit(idselect))));
-  zHit = norminv(pHit-eps,0,1);
-  zFalseAlarm = norminv(pFalseAlarm+eps,0,1);
+  pHit = (sum(D(idPos)>0 & E(idPos)>0)+eps) / (sum(D(idPos)>0 & E(idPos)~=0)+2*eps);
+  pFalseAlarm = (sum(D(idPos)<0 & E(idPos)>0)+eps) / (sum(D(idPos)<0 & E(idPos)~=0)+2*eps);
+  zHit = norminv(pHit,0,1);
+  zFalseAlarm = norminv(pFalseAlarm,0,1);
   dprime(jj,1) = zHit - zFalseAlarm;
   
   % Bias
@@ -167,7 +169,7 @@ for jj = 1:Ncond
 end
 
 %% Consistency evaluated 
-% if Ncond > 1
+% if Npos > 1
 %   consistency(1) = Nchange(2:end) * consistency(2:end) / Nchange(1); % OR: consistency(1) = subj.consistency;
 % end
 
@@ -181,17 +183,21 @@ for ii=1:size(Mcomb,1)
   % Sensitivity (hit defined as farther judgment if D > 0)
   pHit = .5*(sum(E(idfarther)>0) / sum(idfarther)) + ...
          .5*(sum(E(idcloser)<0) / sum(idcloser));
-  zHit = norminv(pHit-eps,0,1);
+  zHit = norminv(pHit+eps,0,1);
   pFalseAlarm = .5*(sum(E(idfarther)<0) / sum(idfarther)) + ...
                 .5*(sum(E(idcloser)<0) / sum(idcloser));
   zFalseAlarm = norminv(pFalseAlarm+eps,0,1);
   dprime_Mcomb(ii) = zHit - zFalseAlarm;
 end
 
-%% Create tables
+%% Catch trials
 clear stats
-Ncond = length(conditions);
-stats.Pos = table(dprime,bias,pCorrect,R2,consistency,'RowNames',PositionLabel(1:Ncond));
+stats.catch.pHit = sum(D==0 & E==0) / sum(D==0);
+stats.catch.pFalseAlarm = sum(D~=0 & E==0) / sum(D~=0);
+stats.catch.dprime = norminv(stats.catch.pHit-eps,0,1) - norminv(stats.catch.pFalseAlarm+eps,0,1);
+
+%% Create tables
+stats.Pos = table(dprime,bias,pCorrect,R2,consistency,'RowNames',PositionLabel(1:Npos));
 
 [dprime_Mcomb_sort,id_sort] = sort(dprime_Mcomb);
 stats.M = table(Mcomb(id_sort,1),Mcomb(id_sort,2),dprime_Mcomb_sort,...
@@ -202,7 +208,7 @@ stats.M = table(Mcomb(id_sort,1),Mcomb(id_sort,2),dprime_Mcomb_sort,...
 if plotflag
   % Psychometric functions
   fig(1) = figure;
-  for ii = 1:Ncond
+  for ii = 1:Npos
     h(ii) = plot(Dset,pFarther(:,ii),PositionColors(ii));
     hold on
   end
@@ -235,8 +241,8 @@ end
 % hold on
 % plot([1.5,1.5],[0,1],'Color',[.5,.5,.5])
 % plot([4.5,4.5],[0,1],'Color',[.5,.5,.5])
-% text(1:Ncond,repmat(0.9,[Ncond,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
-% set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Ncond+.5])
+% text(1:Npos,repmat(0.9,[Npos,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
+% set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Npos+.5])
 % % title(ID{1})
 % ylabel(ylbl)
 
@@ -246,8 +252,8 @@ end
 % % hold on
 % % plot([1.5,1.5],[0,1],'Color',[.5,.5,.5])
 % % plot([4.5,4.5],[0,1],'Color',[.5,.5,.5])
-% text(1:Ncond,repmat(0.9,[Ncond,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
-% set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Ncond+.5])
+% text(1:Npos,repmat(0.9,[Npos,1]),plabel,'HorizontalAlignment','center','FontWeight','bold')
+% set(gca,'XTickLabel',XTickLabel,'XLim',[0.5,Npos+.5])
 % % title(ID{1})
 % ylabel('R^2 or regression coefficient')
 % leg = legend('R^2','M change','SPL change');
@@ -264,7 +270,7 @@ if saveflag
   end
   fn = fullfile(mfilename,[mfilename,'_',ID]);
   set(fig(1),'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
-  print(fig(1),Resolution,'-dpng',[fn,'_psyFct'])
+  print(fig(1),Resolution,'-dpng',[fn,'_psyFct','_',fnext])
   
 %   save(fn,'tabs','pFarther','R2','b')
   
@@ -272,7 +278,9 @@ if saveflag
 %   print(fig(2),Resolution,'-dpng',[fn,'_regress'])
 end
 
+meta.Mcomb = Mcomb;
 meta.Dset = Dset;
-meta.position = conditions;
-meta.positionLabel = PositionLabel(1:length(conditions));
+meta.position = positions;
+meta.positionLabel = PositionLabel(1:Npos);
+meta.Dlabels = Dlabels;
 end

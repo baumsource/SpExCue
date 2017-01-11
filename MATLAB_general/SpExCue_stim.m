@@ -23,7 +23,7 @@ function [stim,Obj] = SpExCue_stim( M,ID,varargin )
 %     fadeDuration    : fade in/out duration in seconds. Default is 0.05s.
 %
 %   Optional flags:
-%     noise   : Gaussian white noise burst (default).
+%     noiseBurst   : Gaussian white noise burst.
 %     speech  : Speech syllable.
 %     DTF     : Directional transfer functions.
 
@@ -103,6 +103,8 @@ elseif flags.do_speech
   Q = fssig/gcd(fssig,fsHRTF);
   P = fsHRTF/gcd(fssig,fsHRTF);
   sig = resample(sig,P,Q);
+% elseif flags.do_IR
+%   sig = [1;zeros(round(kv.individualSignalDur*fsHRTF),1)];
 else % flags.do_continuousNoise
   % long Gaussian white noise burst
   sig = noise(round(kv.individualSignalDur*fsHRTF),1,'white'); 
@@ -140,30 +142,34 @@ for ii = 1:length(M)
 end
 
 %% Resample stim acc. to fs
-% fs = 2*fhigh;
-
-P = kv.fs/gcd(kv.fs,fsHRTF);
-Q = fsHRTF/gcd(kv.fs,fsHRTF);
-for ii = 1:numel(stim.sig)
-  left = resample(stim.sig{ii}(:,1),P,Q);
-  right = resample(stim.sig{ii}(:,2),P,Q);
-  stim.sig{ii} = [left(:),right(:)];
+if not(isequal(kv.fs,fsHRTF))
+  P = kv.fs/gcd(kv.fs,fsHRTF);
+  Q = fsHRTF/gcd(kv.fs,fsHRTF);
+  for ii = 1:numel(stim.sig)
+    left = resample(stim.sig{ii}(:,1),P,Q);
+    right = resample(stim.sig{ii}(:,2),P,Q);
+    stim.sig{ii} = [left(:),right(:)];
+  end
 end
 stim.fs = kv.fs;
 
 %% Band-pass filtering
-if not(flags.do_IR)
+% if not(flags.do_IR)
 %   if kv.flow <= 100
 %     filtOrder = 6;
 %   else
 %     filtOrder = 9;
 %   end
+if flags.do_butter
   filtOrder = 4;
   [b_bp,a_bp] = butter(filtOrder,[kv.flow,kv.fhigh]/(kv.fs/2));
   for ii = 1:numel(stim.sig)
     stim.sig{ii} = filter(b_bp,a_bp,stim.sig{ii});
   end
 end
+% else
+  
+% end
 
 %% Set level (adjust all stimuli by the same factor)
 currentSPL = nan(numel(stim.sig),2);

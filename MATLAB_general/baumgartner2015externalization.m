@@ -142,7 +142,8 @@ end
 si=zeros(size(sigma)); % init
 for ch = 1:size(ireptar,3)
   for it = 1:size(ireptar,2)
-    si(:,it,ch) = 1+eps - (1+exp(-kv.gamma*(sigma(:,it,ch)-kv.S))).^-1;
+%     si(:,it,ch) = 1+eps - (1+exp(-kv.gamma*(sigma(:,it,ch)-kv.S))).^-1; % baumgartner2014
+    si(:,it,ch) = exp(-0.5*(sigma(:,it,ch)/kv.S).^2); % Langendijk
   end
 end
 

@@ -3,14 +3,14 @@
 % Check amp setting: -12 dB !!!
 
 %% Listener-specific settings
-ID = 'S16'; % RS2
-procedure = {...
+ID = 'S21'; % RS2
+procedure = {... 
 %   'screening';...
 %   'behavioral';...
   'eeg';...
   }; 
-aziBehav = [-90,0,90]; % depends on screening result (only directions where distance is dominant movement cue)
-aziEEG = -90; % depends on behavioral result (direction of max dprime)
+aziBehav = [-90,90]; % depends on screening result (only directions where distance is dominant movement cue)
+aziEEG = 90; % depends on behavioral result (direction of max dprime)
 
 %% General settings
 M = [0,0.5,1];

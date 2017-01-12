@@ -39,6 +39,7 @@ saveFileNamePrefix = 'Exp2behav';
 
 %% Experimental variables
 definput = arg_SpExcue;
+definput.flags.task = {'LR','distance'};
 [flags,kv]  = ltfatarghelper({},definput,varargin);
 
 %% Enter listener ID
@@ -49,7 +50,7 @@ else
 end
 
 %% Save path
-savename = fullfile('data',[saveFileNamePrefix '_' subj.ID]);
+savename = fullfile('data',[saveFileNamePrefix,'_',subj.ID,'_',flags.task]);
 if not(isempty(kv.fnExtension))
   savename = [savename,'_',kv.fnExtension];
 end
@@ -63,24 +64,30 @@ closerKey = KbName('c');
 fartherKey = KbName('f');
 equalKey = KbName('space');
 
+MVals = [0,0.5,1,pi];
+MtrigVals = 1:4;
+
 trigVals = struct(...
   'left',000,...
-  'top',100,...
+  'front',100,...
   'right',200,...
-  'M1_K',40,... % KEAMR at stimulus onset
-  'M1_1',30,... % M1 (at stimulus onset) of 1
-  'M1_p5',20,...
-  'M1_0',10,...
-  'M2_K',4,... % KEAMR at stimulus change
-  'M2_1',3,... % M2 (at stimulus change) of 1
-  'M2_p5',2,...
-  'M2_0',1,...
+  'M1_K',10*MtrigVals(4),... % KEAMR at stimulus onset
+  'M1_1',10*MtrigVals(3),... % M1 (at stimulus onset) of 1
+  'M1_p5',10*MtrigVals(2),...
+  'M1_0',10*MtrigVals(1),...
+  'M2_K',MtrigVals(4),... % KEAMR at stimulus change
+  'M2_1',MtrigVals(3),... % M2 (at stimulus change) of 1
+  'M2_p5',MtrigVals(2),...
+  'M2_0',MtrigVals(1),...
+  'rightR',5,...
+  'leftR',6,...
   'closer',5,...
   'farther',6,...
   'equal',7,...
   'correctResponse',8,...
   'wrongResponse',9,...
   'stimulusOffset',0);
+
 
 % direction = round(trig/100)
 % M1 = round(mod(trig,100)/10)
@@ -129,28 +136,35 @@ end
 [x_center,y_center] = RectCenter(winRect);
 
 %% Listener instruction
-instruction1 = [...
-  'In this experiment you will hear pairs of sounds. Only focus on their changes in \n',... 
-  'DISTANCE (relative to the center of your head) and try to ignore other differences \n',...
-  'like elevation, intensity or pitch. \n',...
-  'Sometimes it might sound as coming from a specific location outside your head and \n',...
-  'sometimes it might sound as coming from close to your scalp or even inside your head. \n',...
-  '\n',...
-  'During the experiment your task is to:\n',...
-  '  Press RIGHT BUTTON if the SECOND sound appears to be CLOSER than the first sound or\n'];
-if flags.do_repeateM
-  instruction1 = [instruction1,...
-  '  press LEFT BUTTON if the SECOND sound appears to be FARTHER than the first sound or\n',...
-  '  press *SPACEBAR* if the sound does not change at all (catch trial).\n'];
-else
-  instruction1 = [instruction1,...,...
-  '  press LEFT BUTTON if the SECOND sound appears to be FARTHER than the first sound.\n'];
+if flags.do_distance
+    instruction1 = [...
+      'In this experiment you will hear pairs of sounds. Only focus on their changes in \n',... 
+      'DISTANCE (relative to the center of your head) and try to ignore other differences \n',...
+      'like elevation, intensity or pitch. \n',...
+      'Sometimes it might sound as coming from a specific location outside your head and \n',...
+      'sometimes it might sound as coming from close to your scalp or even inside your head. \n',...
+      '\n',...
+      'During the experiment your task is to:\n',...
+      '  Press the RIGHT BUTTON if the sound is approaching you or\n'];
+    if flags.do_repeateM
+      instruction1 = [instruction1,...
+      '  press the LEFT BUTTON if it is receding from you or\n',...
+      '  press *SPACEBAR* if the sound does not change at all (catch trial).\n'];
+    else
+      instruction1 = [instruction1,...,...
+      '  press the LEFT BUTTON if it is receding from you.\n'];
+    end
+else % flags.do_LR
+    instruction1 = [...
+      'In this experiment you will hear sounds that either move to the left or to the right. \n',... 
+      'Press the LEFT button if the sound moves to the left or \n',...
+      'press the RIGHT button if the sound moves to the right.\n'];
 end
 instruction1 = [instruction1,...
   '\n',...
-  'Please keep your eyes focused on the centered white dot during sound presentation\n',...
-  'and respond not before the dot turned blue, which happens after sound off-set.\n',...
-  'Also, please try not to move during sound presentation! You will have the \n',...
+  'Make your response as fast and accurate as you can! \n',...
+  'Also, keep your eyes focused (not closed) on the centered white dot and \n',...
+  'try not to move during sound presentation. You will have the \n',...
   'opportunity to take breaks and move after blocks of about one minute.\n',...
   '\n'];
 if flags.do_consistencyFeedback
@@ -208,45 +222,60 @@ end
 
 %% Define permutations
 
-% define combinations of M
-NM = length(kv.M);
-C = nchoosek(1:NM,2);
-iMvar = [C;fliplr(C)]; % set of all index pairs without repetition
-iMrep = repmat(1:NM,[NM,1]);
-iMtransp = transpose(iMrep);
-iMrep = [iMrep(:),iMtransp(:)]; % set of all index pairs with repetition
+if flags.do_distance
+    
+    % define combinations of M
+    NM = length(kv.M);
+    C = nchoosek(1:NM,2);
+    iMvar = [C;fliplr(C)]; % set of all index pairs without repetition
+    iMrep = repmat(1:NM,[NM,1]);
+    iMtransp = transpose(iMrep);
+    iMrep = [iMrep(:),iMtransp(:)]; % set of all index pairs with repetition
 
-if flags.do_changeM
-  iM = iMvar;
-  iM = repmat(iM,[kv.Nrep,1]); % repeat Nrep times
-elseif flags.do_repeateM
-  iM = [iMrep;repmat(iMvar,[NM-1,1])]; % combine sets such that M repetitions are as frequent as other M changes (D equally distributed)
-  iM = repmat(iM,[round(kv.Nrep/NM),1]); % repeat Nrep/NM times
-end
-NperPos = length(iM); % 
-Ntotal = NperPos*Npos;
+    if flags.do_changeM
+      iM = iMvar;
+      iM = repmat(iM,[kv.Nrep,1]); % repeat Nrep times
+    elseif flags.do_repeateM
+      iM = [iMrep;repmat(iMvar,[NM-1,1])]; % combine sets such that M repetitions are as frequent as other M changes (D equally distributed)
+      iM = repmat(iM,[round(kv.Nrep/NM),1]); % repeat Nrep/NM times
+    end
+    NperPos = length(iM);
+    Ntotal = NperPos*Npos;
+    
+    % Randomization of M combinations
+    idrandM = randperm(NperPos);
+    iM = iM(idrandM,:);
+    
+    % Randomization of positions
+    iPos = perms(1:length(kv.azi))'; % all permutations of position orders
+    NposPermOrder = size(iPos,2); % # order permutations possible with set of positions
+    iPos = iPos(:,randperm(NposPermOrder)); % randomize across experimental runs
+    if flags.do_halfPosOrderPermutation
+      NposPermOrder = NposPermOrder/2;
+      iPos = iPos(:,1:NposPermOrder);
+    end
+    NposPermTotal = numel(iPos); % length of position sequence (min # of blocks)
+    if kv.Nrep/NposPermOrder ~= round(kv.Nrep/NposPermOrder)
+      error(['Number of repetitions must be a multiple of ',num2str(NposPermOrder),' to assure complete randomization of positions.'])
+    end
 
-% Randomization of M combinations
-idrandM = randperm(NperPos);
-iM = iM(idrandM,:);
-
-% Randomization of positions
-iPos = perms(1:length(kv.azi))'; % all permutations of position orders
-NposPermOrder = size(iPos,2); % # order permutations possible with set of positions
-iPos = iPos(:,randperm(NposPermOrder)); % randomize across experimental runs
-if flags.do_halfPosOrderPermutation
-  NposPermOrder = NposPermOrder/2;
-  iPos = iPos(:,1:NposPermOrder);
-end
-NposPermTotal = numel(iPos); % length of position sequence (min # of blocks)
-if kv.Nrep/NposPermOrder ~= round(kv.Nrep/NposPermOrder)
-  error(['Number of repetitions must be a multiple of ',num2str(NposPermOrder),' to assure complete randomization of positions.'])
+else % flags.do_LR
+    
+    NM = length(kv.M);
+    iM = 1:NM;
+    iPos = repmat([1,3],NM,1);
+    iComb = [iM(:),iPos(:,1);iM(:),iPos(:,2)]; % all combinations between M and L/R
+    iComb = repmat(iComb,kv.Nrep,1);
+    Ntotal = length(iComb);
+    idrand = randperm(Ntotal);
+    iM = iComb(idrand,1);
+    iPos = iComb(idrand,2);
+    
 end
 
 % Repetitions for various positions
 Nblocks = Ntotal/kv.NperBlock;
-while Nblocks ~= round(Nblocks) || ...
-    Nblocks/NposPermTotal ~= round(Nblocks/NposPermTotal)
+while Nblocks ~= round(Nblocks) %||  Nblocks/NposPermTotal ~= round(Nblocks/NposPermTotal)
   kv.NperBlock = kv.NperBlock-1;
   Nblocks = Ntotal/kv.NperBlock;
   dispFlag = true; 
@@ -254,86 +283,31 @@ end
 if exist('dispFlag','var')
   disp(['Number of trials per block reduced to ',num2str(kv.NperBlock),'.'])
 end
-% repeat iM sequence within blocks Npos times
-idPosRep = reshape(1:NperPos,kv.NperBlock,[]); % incrementing index arranged in columns (blocks)
-idPosRep = repmat(idPosRep,[Npos,1]); % order within each block is repeated for every position
-iM = iM(idPosRep(:),:);
-iPos = reshape(iPos,1,[]); % turn permutation matrix to row vector
-iPos = repmat(iPos,[kv.NperBlock,1]); % position constant within block
-iPos = iPos(:);
-iPos = repmat(iPos,[Nblocks/NposPermTotal,1]);
+
+if flags.do_distance
+    % repeat iM sequence within blocks Npos times
+    idPosRep = reshape(1:NperPos,kv.NperBlock,[]); % incrementing index arranged in columns (blocks)
+    idPosRep = repmat(idPosRep,[Npos,1]); % order within each block is repeated for every position
+    iM = iM(idPosRep(:),:);
+    iPos = reshape(iPos,1,[]); % turn permutation matrix to row vector
+    iPos = repmat(iPos,[kv.NperBlock,1]); % position constant within block
+    iPos = iPos(:);
+    iPos = repmat(iPos,[Nblocks/NposPermTotal,1]);
+end
 
 % Set values
-subj.Mcomb = kv.M(iM); % M combination
-subj.D = diff(subj.Mcomb,1,2); % D = M2-M1
+if flags.do_distance
+    subj.Mcomb = kv.M(iM); % M combination
+    subj.D = diff(subj.Mcomb,1,2); % D = M2-M1
+else % flags.do_LR
+    subj.M = kv.M(iM);
+end
 subj.pos = pos(iPos,:);
 subj.SPL = kv.SPL + kv.SPLrove*(rand(Ntotal,2)-0.5); % SPL
 subj.rphase = 2*pi*rand(Ntotal,2); % spectral ripple phase
 if flags.do_pairRove 
   subj.SPL = subj.SPL(:,1);
   subj.rphase = subj.rphase(:,1);
-end
-
-%% Listener familiarization & SPL check
-if flags.do_familiarize
-    KbStrokeWait;
-    % Fixation point
-    Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
-    Screen('Flip',win);
-    pause(1)
-    for pp = 1:size(subj.stim.sig,2)
-      for ii = 1:size(subj.stim.sig,1)
-        i1 = ii;
-        i2 = mod(ii+1,length(kv.M))+1;
-        sigpair = SpExCue_crossfade(subj.stim.sig{i1,pp},subj.stim.sig{i2,pp},...
-          subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
-        sigpair = 10^(kv.SPLrove/2/20)*sigpair; % present max level
-        if flags.do_TDTon
-          myTDT.load_stimulus(sigpair);
-          myTDT.play()
-        else
-          sound(sigpair,fs)
-        end
-        
-        % response after stimulus offset
-        pause(kv.dur)
-        Screen('DrawDots',win, [x_center,y_center], 14, blue, [], 2);
-        Screen('Flip',win);
-      
-        % response via keyboard 
-        keyCodeVal = 0;
-        while not(keyCodeVal==closerKey || keyCodeVal==fartherKey) % 67...C, 70...F
-            [tmp,keyCode] = KbWait([],2);
-            keyCodeVal = find(keyCode,1);
-        end
-        E = sign(keyCodeVal-(closerKey+fartherKey)/2); 
-        D = kv.M(i2)-kv.M(i1);
-        hit = E*D > 0;
-
-        % feedback
-        if flags.do_TbTfeedback
-          if hit
-            Screen('DrawDots',win, [x_center,y_center], 14, green, [], 2);
-          else
-            Screen('DrawDots',win, [x_center,y_center], 14, red, [], 2);
-          end
-        else
-          Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
-        end
-        Screen('Flip',win);
-        pause(0.4)
-        Screen('DrawDots',win, [x_center,y_center], 14, white, [], 2);
-        Screen('Flip',win);
-        
-        pause(1)
-      end
-    end
-    instruction2 = [...
-      'These were the test examples.\n',...
-      'Do you have any questions?\n',...
-      'If not press any key to start!\n'];
-    DrawFormattedText(win,instruction2,'center','center',white,120,0,0,1.5);
-    Screen('Flip',win);
 end
 
 %% Test procedure
@@ -372,9 +346,9 @@ for bb = 1:Nblocks
     aziTrigVal = trigVals.right;
   else
     aziLabel = 'front';
-    aziTrigVal = trigVals.top;
+    aziTrigVal = trigVals.front;
   end
-  if Npos > 1 % display position
+  if Npos > 1 && flags.do_distance % display position
     DrawFormattedText(win,['Sounds from ' aziLabel '.'],'center','center',white);
     Screen('Flip',win);
     pause(2)
@@ -388,12 +362,22 @@ for bb = 1:Nblocks
   % Randomized presentation order
   for iC = 1:kv.NperBlock
     ii = ii+1;
-    sig1 = subj.stim.sig{iM(ii,1),iPos(ii)};
-    sig2 = subj.stim.sig{iM(ii,2),iPos(ii)};
-    M1TrigVal = ceil(2*subj.Mcomb(ii,1)+1)*10;
-    M2TrigVal = ceil(2*subj.Mcomb(ii,2)+1);
-    TrigValOnset = aziTrigVal+M1TrigVal;
-    TrigValChange = aziTrigVal+M1TrigVal+M2TrigVal;
+    
+    if flags.do_distance
+        sig1 = subj.stim.sig{iM(ii,1),iPos(ii)};
+        sig2 = subj.stim.sig{iM(ii,2),iPos(ii)};
+        M1TrigVal = 10*iM(ii,1);
+        M2TrigVal = iM(ii,2);
+        TrigValOnset = aziTrigVal+M1TrigVal;
+        TrigValChange = aziTrigVal+M1TrigVal+M2TrigVal;
+    else % flags.do_LR
+        sig1 = subj.stim.sig{iM(ii),2};
+        sig2 = subj.stim.sig{iM(ii),iPos(ii)};
+        M1TrigVal = 10*iM(ii);
+        M2TrigVal = iM(ii);
+        TrigValOnset = trigVals.front+M1TrigVal;
+        TrigValChange = aziTrigVal+M1TrigVal+M2TrigVal;
+    end
 
     % roving of stimulus components
     if flags.do_componentRove
@@ -462,6 +446,10 @@ for bb = 1:Nblocks
         [keyCodeVal, pressSamples]=myTDT.get_button_presses(); % relative to start of playback
         pause(0.1)
       end
+      if length(keyCodeVal) > 1 % multiple responses
+        keyCodeVal = keyCodeVal(find(keyCodeVal>0,1));
+        pressSamples = pressSamples(1);
+      end
       subj.RT(ii) = (pressSamples./myTDT.sampleRate)-kv.dur/2+dt;
  
     else
@@ -480,13 +468,13 @@ for bb = 1:Nblocks
     Screen('DrawDots',win, [x_center,y_center], 14, black, [], 2);
     Screen('Flip',win);
     
-    % Externalization response
+    % Response
     if any(keyCodeVal == [closerKey,8])
-      subj.E(ii) = -1;
-      Etrig = trigVals.closer;
+      subj.E(ii) = -1; % closer or right
+      Etrig = trigVals.closer; % = trigVals.rightR
     elseif any(keyCodeVal == [fartherKey,1])
-      subj.E(ii) = 1;
-      Etrig = trigVals.farther;
+      subj.E(ii) = 1; % farther or left
+      Etrig = trigVals.farther; % = trigVals.leftR
     elseif keyCodeVal == equalKey
       subj.E(ii) = 0;
       Etrig = trigVals.equal;
@@ -498,8 +486,12 @@ for bb = 1:Nblocks
       send_event(myTDT, Etrig)
     end
     
-    % Relationship between D and E 
-    subj.hit(ii) = subj.E(ii) == sign(subj.D(ii));
+    % Response evaluation 
+    if flags.do_distance
+        subj.hit(ii) = subj.E(ii) == sign(subj.D(ii));
+    else % flags.do_LR
+        subj.hit(ii) = subj.E(ii) == sign(subj.pos(ii,1));
+    end
     if flags.do_TDTon % Send response evaluation trigger
       pause(2*trigDuration)
       if subj.hit(ii)

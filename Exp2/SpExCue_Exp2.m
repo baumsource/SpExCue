@@ -40,7 +40,7 @@ saveFileNamePrefix = 'Exp2behav';
 %% Experimental variables
 definput = arg_SpExcue;
 definput.flags.task = {'LR','distance'};
-definput.flags.responseDevice = {'keyboard','responseBox'};
+definput.flags.responseDevice = {'responseBox','keyboard'};
 [flags,kv]  = ltfatarghelper({},definput,varargin);
 
 %% Enter listener ID
@@ -109,7 +109,7 @@ minmaxChVolt = db2mag(3*3)*2.53;  % min/max voltage for the output channels (sca
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
-  myTDT = tdt('playback_2channel', fsVal, minmaxChVolt, trigDuration );
+  myTDT = tdt('playback_2channel_16bit', fsVal, minmaxChVolt, trigDuration );
 end
 
 %% Initialize the graphical interface for Psychtoolbox
@@ -444,8 +444,9 @@ for bb = 1:Nblocks
       triggerInfo = [   1,TrigValOnset; ...
                       nM2,TrigValChange;...
                       size(sigpair,1),trigVals.stimulusOffset];
+      sigpair = cat(1,sigpair,zeros(round(0.5*myTDT.sampleRate),2)); % add half a second of silence for RT analysis
       myTDT.load_stimulus(sigpair, triggerInfo);
-      if flags.do_keyboard; tic; end
+      if flags.do_keyboard; tic; end % start tic
       myTDT.play()
       pause(kv.dur/2+dt)
       
@@ -466,9 +467,9 @@ for bb = 1:Nblocks
       
     else % flags.do_responseBox
       keyCodeVal = nan;
-      while not(any(keyCodeVal(1)==[1,8,0]))
+      while not(any(keyCodeVal(1)==[1,8]))
         [keyCodeVal, pressSamples]=myTDT.get_button_presses(); % relative to start of playback
-        pause(0.1)
+        pause(0.01)
       end
       if length(keyCodeVal) > 1 % multiple responses
         keyCodeVal = keyCodeVal(find(keyCodeVal>0,1));
@@ -541,7 +542,7 @@ for bb = 1:Nblocks
     Screen('Flip',win);
 
     % ITI jitter
-    pause(0.5 + kv.jitter*(rand-0.5))
+    pause(kv.jitter*(1-rand))
 
     if flags.do_debugMode
       close(figSgram)

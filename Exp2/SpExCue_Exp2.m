@@ -111,6 +111,9 @@ trigDuration = 0.005;  % duration of trigger in seconds
 if flags.do_TDTon
   myTDT = tdt('playback_2channel_16bit', fsVal, minmaxChVolt, trigDuration );
 end
+if floor(myTDT.sampleRate/1e3) ~= fsVal
+  error('RB: Sampling rate issue. Reboot PC and TDT!')
+end
 
 %% Initialize the graphical interface for Psychtoolbox
 

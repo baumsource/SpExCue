@@ -40,6 +40,7 @@ saveFileNamePrefix = 'Exp2behav';
 %% Experimental variables
 definput = arg_SpExcue;
 definput.flags.task = {'LR','distance'};
+definput.flags.responseDevice = {'keyboard','responseBox'};
 [flags,kv]  = ltfatarghelper({},definput,varargin);
 
 %% Enter listener ID
@@ -136,6 +137,13 @@ end
 [x_center,y_center] = RectCenter(winRect);
 
 %% Listener instruction
+if flags.do_keyboard
+  closerKeylbl = 'C';
+  fartherKeylbl = 'F';
+else % flags.do_responseBox
+  closerKeylbl = 'the RIGHT button';
+  fartherKeylbl = 'the LEFT button';
+end
 if flags.do_distance
     instruction1 = [...
       'In this experiment you will hear pairs of sounds. Only focus on their changes in \n',... 
@@ -145,20 +153,20 @@ if flags.do_distance
       'sometimes it might sound as coming from close to your scalp or even inside your head. \n',...
       '\n',...
       'During the experiment your task is to:\n',...
-      '  Press the RIGHT BUTTON if the sound is approaching you or\n'];
+      '  Press ',closerKeylbl,' if the sound is approaching you or\n'];
     if flags.do_repeateM
       instruction1 = [instruction1,...
-      '  press the LEFT BUTTON if it is receding from you or\n',...
+      '  press ',fartherKeylbl,' if it is receding from you or\n',...
       '  press *SPACEBAR* if the sound does not change at all (catch trial).\n'];
     else
       instruction1 = [instruction1,...,...
-      '  press the LEFT BUTTON if it is receding from you.\n'];
+      '  press ',fartherKeylbl,' if it is receding from you.\n'];
     end
 else % flags.do_LR
     instruction1 = [...
       'In this experiment you will hear sounds that either move to the left or to the right. \n',... 
-      'Press the LEFT button if the sound moves to the left or \n',...
-      'press the RIGHT button if the sound moves to the right.\n'];
+      'Press ',fartherKeylbl,' if the sound moves to the left or \n',...
+      'press ',closerKeylbl,' if the sound moves to the right.\n'];
 end
 instruction1 = [instruction1,...
   '\n',...
@@ -437,10 +445,26 @@ for bb = 1:Nblocks
                       nM2,TrigValChange;...
                       size(sigpair,1),trigVals.stimulusOffset];
       myTDT.load_stimulus(sigpair, triggerInfo);
+      if flags.do_keyboard; tic; end
       myTDT.play()
       pause(kv.dur/2+dt)
       
-      %Get response key and time
+    else
+      if flags.do_keyboard; tic; end
+      sound(sigpair,fs)% Response via keyboard 
+      pause(kv.dur/2+dt)
+    end
+    
+    %Get response key and time
+    if flags.do_keyboard
+      keyCodeVal = 0;
+      while not(any(keyCodeVal==[closerKey,fartherKey])) %,equalKey
+        [tmp,keyCode] = KbWait([],2);
+        keyCodeVal = find(keyCode,1);
+      end
+      subj.RT(ii) = toc-kv.dur/2+dt;
+      
+    else % flags.do_responseBox
       keyCodeVal = nan;
       while not(any(keyCodeVal(1)==[1,8,0]))
         [keyCodeVal, pressSamples]=myTDT.get_button_presses(); % relative to start of playback
@@ -451,17 +475,7 @@ for bb = 1:Nblocks
         pressSamples = pressSamples(1);
       end
       subj.RT(ii) = (pressSamples./myTDT.sampleRate)-kv.dur/2+dt;
- 
-    else
-      tic;
-      sound(sigpair,fs)% Response via keyboard 
-      pause(kv.dur/2+dt)
-      keyCodeVal = 0;
-      while not(any(keyCodeVal==[closerKey,fartherKey])) %,equalKey
-        [tmp,keyCode] = KbWait([],2);
-        keyCodeVal = find(keyCode,1);
-      end
-      subj.RT(ii) = toc-kv.dur/2+dt;
+      
     end
 
     % Visual marker at stimulus offset for response request

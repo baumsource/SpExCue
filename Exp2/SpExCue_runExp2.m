@@ -3,7 +3,7 @@
 % Check amp setting: -12 dB !!!
 
 %% check TDT
-myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
+% myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
 ID = 'RB'; % RS2
@@ -53,7 +53,7 @@ switch procedure{1}
     %% distance discrimination 
     Nrep = 6; % 840 trials -> 42 min presentation time -> 60 min with breaks
     M = [0,0.5,1];
-    SpExCue_Exp2(ID,'M',M,'azi',azi,'Nrep',Nrep,'debugMode','responseBox',...
+    SpExCue_Exp2(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox',...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,'changeM')
   
     cd analysis

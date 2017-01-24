@@ -60,10 +60,15 @@ if not(exist('./data','dir'))
 end
 
 %% Internal seetings
-KbName('UnifyKeyNames');
-closerKey = KbName('c');
-fartherKey = KbName('f');
-equalKey = KbName('space');
+if flags.do_keyboard
+    KbName('UnifyKeyNames');
+    closerKey = KbName('c');
+    fartherKey = KbName('f');
+    equalKey = KbName('space');
+else % flags.do_responseBox
+    fartherKey = 1;
+    closerKey = 2;
+end
 
 MVals = [0,0.5,1,pi];
 MtrigVals = 1:4;
@@ -109,7 +114,7 @@ minmaxChVolt = db2mag(3*3)*2.53;  % min/max voltage for the output channels (sca
 trigDuration = 0.005;  % duration of trigger in seconds
 
 if flags.do_TDTon
-  myTDT = tdt('playback_2channel_16bit', fsVal, minmaxChVolt, trigDuration );
+  myTDT = tdt('playback_2channel', fsVal, minmaxChVolt, trigDuration );
 end
 if floor(myTDT.sampleRate/1e3) ~= fsVal
   error('RB: Sampling rate issue. Reboot PC and TDT!')
@@ -470,13 +475,13 @@ for bb = 1:Nblocks
       
     else % flags.do_responseBox
       keyCodeVal = nan;
-      while not(any(keyCodeVal(1)==[1,8]))
+      while not(any(keyCodeVal(end)==[closerKey,fartherKey]))
         [keyCodeVal, pressSamples]=myTDT.get_button_presses(); % relative to start of playback
         pause(0.01)
       end
       if length(keyCodeVal) > 1 % multiple responses
-        keyCodeVal = keyCodeVal(find(keyCodeVal>0,1));
-        pressSamples = pressSamples(1);
+        keyCodeVal = keyCodeVal(end);
+        pressSamples = pressSamples(end);
       end
       subj.RT(ii) = (pressSamples./myTDT.sampleRate)-kv.dur/2+dt;
       
@@ -487,10 +492,10 @@ for bb = 1:Nblocks
     Screen('Flip',win);
     
     % Response
-    if any(keyCodeVal == [closerKey,8])
+    if any(keyCodeVal == closerKey)
       subj.E(ii) = -1; % closer or right
       Etrig = trigVals.closer; % = trigVals.rightR
-    elseif any(keyCodeVal == [fartherKey,1])
+    elseif any(keyCodeVal == fartherKey)
       subj.E(ii) = 1; % farther or left
       Etrig = trigVals.farther; % = trigVals.leftR
     elseif keyCodeVal == equalKey

@@ -439,12 +439,12 @@ for bb = 1:Nblocks
       sgram(sigpair(:,2),fs,'dynrange',60,'db')
       title('Right')
       % Display trial values
-      M = [subj.Mcomb(ii,1);subj.Mcomb(ii,2)];
-      Trigger = [TrigValOnset;TrigValChange];
-      RipplePhase = subj.rphase(ii,:)';
-      SPL = subj.SPL(ii,:)';
-      RowNames = {'Onset','Change'};
-      table(M,Trigger,RipplePhase,SPL,'RowNames',RowNames)
+%       M = [subj.Mcomb(ii,1);subj.Mcomb(ii,2)];
+%       Trigger = [TrigValOnset;TrigValChange];
+%       RipplePhase = subj.rphase(ii,:)';
+%       SPL = subj.SPL(ii,:)';
+%       RowNames = {'Onset','Change'};
+%       table(M,Trigger,RipplePhase,SPL,'RowNames',RowNames)
     end
 
     % playback and response

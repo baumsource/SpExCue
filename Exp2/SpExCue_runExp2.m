@@ -6,11 +6,11 @@
 % myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
-ID = 'S07'; % RS2
+ID = 'RB'; % RS2
 procedure = {... 
 %   'screening';...
-%   'LR';...
-  'distance';...
+  'LR';...
+%   'distance';...
   }; 
 azi = -90;
 
@@ -18,7 +18,10 @@ azi = -90;
 HRTFs = 'HRCeq';
 Feedback = 'noFeedback';
 roving = 'noRoving';
-screenNumber = 0;
+flow = 4e3;
+bpFlag = 'noBP';
+screenNumber = 2;
+% Screen('Preference', 'SkipSyncTests', 1);
 
 %% Load dependencies
 addpath(fullfile('..','MATLAB_general'))
@@ -41,11 +44,11 @@ switch procedure{1}
     M = [0,1];
     aziLR = [azi,0,-azi];
     
-    SpExCue_Exp2(ID,'M',M,'azi',aziLR,'Nrep',Nrep,...
+    SpExCue_Exp2(ID,'M',M,'azi',aziLR,'Nrep',Nrep,'flow',flow,bpFlag,...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,'changeM')
   
     cd analysis
-    SpExCue_analyzeExp2BTL(ID,procedure{1})
+    SpExCue_analyzeExp2RT(ID,procedure{1})
 %     SpExCue_analyzeExp2behav(ID,fnExtension);
     cd ..
     
@@ -53,7 +56,8 @@ switch procedure{1}
     %% distance discrimination 
     Nrep = 10; % 840 trials -> 42 min presentation time -> 60 min with breaks
     M = [0,0.5,1];
-    SpExCue_Exp2(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox',...
+    
+    SpExCue_Exp2(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,'changeM')
   
     cd analysis

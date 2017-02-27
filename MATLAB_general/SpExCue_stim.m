@@ -50,7 +50,7 @@ definput.keyvals.pos=[0,0]; % spatial position [azimuth,elevation] in deg.
   {'pos','fs','flow','fhigh','SPL','individualSignalDur'},definput,varargin);
 
 % position key-value pair kept for backwards compatibility
-if all(kv.pos == 0) && ismember('azi',varargin(cellfun('isclass',varargin,'char')))
+if all(kv.pos(:) == 0) && ismember('azi',varargin(cellfun('isclass',varargin,'char')))
   if length(kv.ele) == 1 && length(kv.azi) > 1
     kv.ele = repmat(kv.ele,length(kv.azi),1);
   end

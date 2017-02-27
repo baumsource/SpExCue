@@ -6,20 +6,20 @@ stimulusFlag = 'IR'; % 'IR' 'speech' 'AMnoise'
 flags.do_erb = false;
 flags.do_ILD = false;
 
-azi = 90;
+azi = 0;
 ele = 0;
 M = [1,0.5,0];
 ID = 'RB';
-rdepth = 20;
+rdepth = 0;
 rdensity = 0.25;
 rphase = 0;%(0:.5:1.5)*pi;
-flow = 1000;
+flow = 5000;
 fhigh = 16e3;
 
 %% Generate flat-source stimulus
 switch stimulusFlag
   case 'IR'
-    subj.stim = SpExCue_stim( M,ID,[azi,ele],44.1e3,flow,fhigh,80,'fadeDuration',0,'IR' );
+    subj.stim = SpExCue_stim( M,ID,[azi,ele],44.1e3,flow,fhigh,60,'IR','noBP' );
   otherwise
     subj.stim = SpExCue_stim( M,ID,[azi,ele],48e3,flow,fhigh,80,stimulusFlag);
 end
@@ -33,7 +33,7 @@ end
   
 Nfft = 2^10;
 freq = 0:subj.stim.fs/Nfft:subj.stim.fs/2; % frequency vector
-frange = [flow,fhigh];
+frange = [100,fhigh];
 if flags.do_erb
   freq = freqtoerb(freq);
   frange = freqtoerb(frange);
@@ -62,7 +62,7 @@ for ii = 1:length(M)
   subplot(1,2,2)
   if strcmp(stimulusFlag,'IR')
     plot(freq,mag{ii}(:,2))
-    yrange = [-10,30];
+    yrange = [-10,30]-20;
   else
     plot(freq,mag_smoothed{ii}(:,2))
     yrange = [-10,40];

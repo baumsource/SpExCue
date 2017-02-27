@@ -1,4 +1,4 @@
-function varargout = SpExCue_crossfade(sig1,sig2,fs,dur,tcross,durfade,fadeIOflag)
+  function varargout = SpExCue_crossfade(sig1,sig2,fs,dur,tcross,durfade,fadeIOflag)
 %SpExCue_crossfade creates cross-faded stimulus pair (cos^2 fade)
 %   Usage: [sigpair,nM2] = SpExCue_crossfade(sig1,sig2,fs,dur,tcross,durfade,fadeIOflag)
 %

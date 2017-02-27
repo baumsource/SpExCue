@@ -13,6 +13,10 @@ conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCl
 % 13: all except D=0
 design = 13;
 
+
+  
+iERPmax = 32; % Cz (evaluated by code above), use 27 for F4, 13 for Pz
+
 % Statistical analysis
 stats.mcorrect = 'none'; % 'none' or 'MonteCarloCluster'
 
@@ -22,9 +26,12 @@ plotflag.erp = true;
 plotflag.compAmp = true;
 flags.do_print = false;
 
+% ERP evaluation option
+flags.do_ihd = true; % evaluate inter-hemispheric differences in ERPs (right - left
+
 % Precomp settings
 precomp.redo = 'off';
-precomp.data = 'components'; % 'components' or 'channels'
+precomp.data = 'channels'; % 'components' or 'channels'
 precomp.erp = 'on';
 precomp.scalp = 'on';
 precomp.spec = 'off';
@@ -156,7 +163,7 @@ end
 % update workspace variables and redraw EEGLAB window
 % CURRENTSTUDY = 1; EEG = ALLEEG; CURRENTSET = 1:length(EEG);
 [STUDY, ALLEEG] = std_checkset(STUDY, ALLEEG);
-eeglab redraw
+% eeglab redraw
 
 %% Compute measures
 
@@ -213,8 +220,7 @@ if flags.do_channels
 %       ERPmax(jj) = max(max(abs(mean(erpdata{1},2)),abs(mean(erpdata{2},2)))); 
 %     end
 %     [~,iERPmax] = max(ERPmax);
-  
-  iERPmax = 32; % Cz (evaluated by code above)
+
   chanLabel = ChanLbls(iERPmax);
   
   figERP = [];
@@ -262,8 +268,21 @@ if flags.do_channels
   figComp = [];
   if plotflag.compAmp
     
-    [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,...
-      'channels',ChanLbls(iERPmax),'noplot','on');
+    if flags.do_ihd % Inter-hemispheric difference
+      chL = [1:12,14,15];
+      chR = 17:30;
+      [STUDY,erpdataL,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,...
+        'channels',ChanLbls(chL),'noplot','on');
+      [~,erpdataR] = std_erpplot(STUDY,ALLEEG,...
+        'channels',ChanLbls(chR),'noplot','on');
+      erpdata = cell(length(erpdataR),1);
+      for jj=1:length(erpdata)
+        erpdata{jj} = squeeze(mean(erpdataR{jj} - erpdataL{jj},2));
+      end
+    else
+      [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,...
+        'channels',ChanLbls(iERPmax),'noplot','on');
+    end
     
     behav = load('SpExCue_analyzeExp1behav_avg_eeg.mat');
       

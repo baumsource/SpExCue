@@ -9,9 +9,9 @@ end
 filepath = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Pilots/EEG3/data';
 fnX = 'SpExCue_EEGpilot3_Sxx_blinkICrej_fmax30_Cxx.set';
 fnStudy = 'SpExCue_EEGpilot3_ALL_blinkICrej_fmax30_groupE.study';
-subject = {'RS','RB','S01','S02','S04'}; % RS: M = 0.5; S03: reversed externalization judgements
+subject = {'RS','S09','S11'}; % 'S01','S02','S04','S07','S08',  ;RS: M = 0.5; S03: reversed externalization judgements
 condition = {'Closer','Farther'};
-design = 1; % 1: all, 2: Mc=1/3, 3: D=1/3, 4: D=-1/3
+design = 2; % 1: all, 2: Mc=1/3, 3: D=1/3, 4: D=-1/3
 
 %% Create STUDY
 
@@ -32,14 +32,15 @@ end
 [STUDY,ALLEEG] = std_editset( [], [], 'commands', commands,...
   'task', 'closer vs. farther for second of two consecutive noise bursts',...
   'name', 'SpExCue', 'filename', fnStudy,'filepath',filepath); 
+STUDY.design(1).name = 'all';
 
 % Create additional designs
 STUDY = std_makedesign(STUDY, ALLEEG, 2, 'name', 'Mc0p3',...
   'variable1', 'condition', 'datselect',{'type',{12,32}},'subjselect',subject);
 STUDY = std_makedesign(STUDY, ALLEEG, 3, 'name', 'D0p3',...
-  'variable1', 'condition', 'datselect',{'type',{12}},'subjselect',subject(2:end));
+  'variable1', 'condition', 'datselect',{'type',{12}},'subjselect',subject);
 STUDY = std_makedesign(STUDY, ALLEEG, 4, 'name', 'Dm0p3',...
-  'variable1', 'condition', 'datselect',{'type',{21}},'subjselect',subject(2:end));
+  'variable1', 'condition', 'datselect',{'type',{21}},'subjselect',subject);
 STUDY.currentdesign = design;
 
 % update workspace variables and redraw EEGLAB
@@ -61,7 +62,7 @@ NtrialsTab = array2table(Ntrials,'RowNames',condition,'VariableNames',[subject,{
 
 % Channels
 [STUDY ALLEEG customRes] = std_precomp(STUDY, ALLEEG, 'channels', 'interp', 'on',... % { 'Cz' 'Pz' }
-	'erp', 'on', 'spec', 'off', 'ersp', 'on', 'itc', 'on', 'erspparams', ...
+	'erp', 'on', 'spec', 'off', 'ersp', 'off', 'itc', 'off', 'erspparams', ...
     { 'cycles', [2,10], 'freqs', [2 20],'nfreqs',10, 'alpha', 0.01, 'padratio' 1 });
 % ICs
 % [STUDY ALLEEG customRes] = std_precomp(STUDY, ALLEEG, 'components', 'interp', 'on',...
@@ -91,23 +92,32 @@ STUDY = pop_statparams(STUDY,'condstats','on','mode','fieldtrip',...
 % Scalp topographies
 ChanLbls = {ALLEEG(1).chanlocs.labels};
 topotime = {[100 150];[200 250];[300 600]};
+topotimeLabel = {'N1','P2','P3'};
 % topotime = {[200 250]};
+figTopo = [];
 for ii = 1:length(topotime)
   [STUDY, C(ii).erpdata, ~, ~, C(ii).pcond] = std_erpplot(STUDY,ALLEEG,...
     'channels',ChanLbls(1:32), 'topotime',topotime{ii},'ylim',[-4,4]);
+  figTopo(ii) = gcf;
 end
 
 %% ERP analysis
 STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
   'timerange',[-200,800],'averagechan','on','topotime',[]);
 alpha = .05;
-for ii = 1%:length(C)
-  if any(C(ii).pcond{1} < alpha)
-    selChan = find(C(ii).pcond{1} < alpha)';
-  else
-    [~,selChan] = min(C(ii).pcond{1});
-  end
-  for jj = [32];%selChan
+% selChan = [23,32];
+% ChLAB = ChanLbls(selChan);
+kk = 1; % counter
+ii = 2;
+figERP = [];
+ChLAB = [];
+for jj = 1:length(ChanLbls)
+%   if any(C(ii).pcond{1} < alpha)
+%     selChan = find(C(ii).pcond{1} < alpha)';
+%   else
+%     [~,selChan] = min(C(ii).pcond{1});
+%   end
+%   for jj = selChan
     [STUDY, C(ii).erp(jj).erpdata, C(ii).erp(jj).erptimes, ~, C(ii).erp(jj).pcond] = std_erpplot(...
       STUDY,ALLEEG,'channels',ChanLbls(jj));
 
@@ -120,23 +130,33 @@ for ii = 1%:length(C)
     YLim = get(gca,'YLim');
     hold on
     plot(tsigdiff,(YLim(1)+.1)*ones(length(tsigdiff),1),'r.')
-  end
+    if any(tsigdiff)
+      figERP(kk) = gcf;
+      ChLAB{kk} = ChanLbls{jj};
+      kk = kk+1;
+    end
+%   end
 end
 
 % STUDY = pop_chanplot(STUDY,ALLEEG);
 
-%% Print
-
 disp(NtrialsTab)
+
+%% Print
 
 FontSize = 8;
 Resolution = '-r600';
-set(findall(gcf,'-property','FontSize'),'FontSize',FontSize)
+set(findall([figTopo,figERP],'-property','FontSize'),'FontSize',FontSize)
 
-fn = ['analyzeEEGpilot3_eeglab_study/topo_','N1','_groupE_' STUDY.design(design).name];
-set(gcf,'PaperUnits','centimeters','PaperPosition',[100,100,20,5])
+set(figTopo,'PaperUnits','centimeters','PaperPosition',[100,100,20,5])
+for ii = 1:length(figTopo)
+  fn = ['analyzeEEGpilot3_eeglab_study/topo_',topotimeLabel{ii},'_groupE_' STUDY.design(design).name];
+  print(figTopo(ii),Resolution,'-dpng',fn)
+end
 
-% fn = ['analyzeEEGpilot3_eeglab_study/erp_','Cz','_groupE_' STUDY.design(design).name];
-% set(gcf,'PaperUnits','centimeters','PaperPosition',[100,100,10,6])
+set(figERP,'PaperUnits','centimeters','PaperPosition',[100,100,12,8])
+for ii = 1:length(figERP)
+  fn = ['analyzeEEGpilot3_eeglab_study/erp_',ChLAB{ii},'_groupE_' STUDY.design(design).name];
+  print(figERP(ii),Resolution,'-dpng',fn)
+end
 
-print(gcf,Resolution,'-dpng',fn)

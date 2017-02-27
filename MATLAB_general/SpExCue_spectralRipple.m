@@ -36,7 +36,7 @@ ripple = rdepth/2 * sin(2*pi*rdensity*ftrans + rphase); % magnitude ripple
 % Add ripple
 % Option 1: by simply adding the ripple to the magnitude response
 ripmag = mag;
-ripmag(idf,:) = ripmag(idf,:) + repmat(ripple(:),1,size(mag,2)); % rippled magnitude 
+ripmag(idf,:,:) = ripmag(idf,:,:) + repmat(ripple(:),[1,size(mag,2),size(mag,3)]); % rippled magnitude 
 riptf = 10.^(ripmag/20).*exp(1i*angle(tfin)); % rippled transfer function
 out = ifftreal(riptf,Nfft); % rippled time-domain stimulus
 % Option 2: by creating a corresponding min-phase filter

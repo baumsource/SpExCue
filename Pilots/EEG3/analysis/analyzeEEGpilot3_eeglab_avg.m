@@ -270,6 +270,9 @@ for ll = 1:length(IDs)
 
     EEG(ii) = eeg_checkset(EEG(ii));
     
+    %% Dipole fitting
+    
+    
     %% Export dataset
     if flags.do_export
       fnExport = strrep(fnERP,'.set',['_',MlegendLabel{ii},'.set']);

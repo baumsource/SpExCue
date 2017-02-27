@@ -1,10 +1,10 @@
 % listen to concatenated stimuli with regularly ordered spectral contrast
 
-ID = 'S06';
-M = [1,0];
+ID = 'RB';
+M = 0:0.5:1;
 % M = [1,0,1,0];
 pos = [90,0];
-flow = 800;
+flow = 1e3;
 fhigh = 16e3;
 
 % Changes in azimuth
@@ -43,4 +43,4 @@ concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
 
 %% Playback
 % pause
-% sound(concatStim,stim.fs)
+sound(concatStim,stim.fs)

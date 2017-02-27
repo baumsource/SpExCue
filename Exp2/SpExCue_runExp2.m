@@ -6,13 +6,13 @@
 % myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
-ID = 'RB'; % RS2
+ID = 'S07'; % RS2
 procedure = {... 
 %   'screening';...
 %   'LR';...
   'distance';...
   }; 
-azi = 30;
+azi = -90;
 
 %% General settings
 HRTFs = 'HRCeq';
@@ -51,7 +51,7 @@ switch procedure{1}
     
   case 'distance'
     %% distance discrimination 
-    Nrep = 6; % 840 trials -> 42 min presentation time -> 60 min with breaks
+    Nrep = 10; % 840 trials -> 42 min presentation time -> 60 min with breaks
     M = [0,0.5,1];
     SpExCue_Exp2(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox',...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,'changeM')

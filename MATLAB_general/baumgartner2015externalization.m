@@ -1,6 +1,6 @@
-function dext = baumgartner2015externalization( target,template,varargin )
+function [dext,tang,rang] = baumgartner2015externalization( target,template,varargin )
 %BAUMGARTNER2015EXTERNALIZATION Model for sound externalization
-%   Usage:    [dext] = baumgartner2015externalization( target,template )
+%   Usage:    [dext,tang,rang] = baumgartner2015externalization( target,template )
 %
 %   Input parameters:
 %     target  : binaural impulse response(s) referring to the directional 
@@ -49,7 +49,7 @@ if size(target,3) == 1 && size(target,2) == 2
 end
 
 if isstruct(template) % Template given in SOFA format
-  [template,kv.polsamp] = extractsp( kv.lat,template );
+  [template,rang] = extractsp( kv.lat,template );
 end
 
 if size(template,3) == 1 && size(template,2) == 2

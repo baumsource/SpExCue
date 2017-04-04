@@ -1,12 +1,12 @@
 function spatializedReferenceSounds
 % Sound example
 
-ID = 'RB';
+ID = 'Yuqi';
 
 azi = 90:-30:-90;
 ele = zeros(1,length(azi));
 
-fn = fullfile('..','HRTFs',[ID,'_3ms.sofa']);
+fn = fullfile('..','HRTFs',[ID,'_eq.sofa']);
 Obj = SOFAload(fn);
 
 sig = noise(10*Obj.Data.SamplingRate,1,'white');

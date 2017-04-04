@@ -127,8 +127,8 @@ else
   % Save
   [STUDY,ALLEEG] = std_editset([],[],'commands',commands,'name','SpExCue',...
     'task', 'closer vs. farther for second of two consecutive noise bursts'); 
-  [STUDY,ALLEEG] = std_editset(STUDY, ALLEEG,... % apply dipfit residual var threshold of 15%
-    'commands',{{'inbrain' 'on' 'dipselect' 0.15}},'updatedat','on','rmclust','off' );
+%   [STUDY,ALLEEG] = std_editset(STUDY, ALLEEG,... % apply dipfit residual var threshold of 15%
+%     'commands',{{'inbrain' 'on' 'dipselect' 0.15}},'updatedat','on','rmclust','off' );
   STUDY.design(1).name = 'all';
 
   % Create additional designs

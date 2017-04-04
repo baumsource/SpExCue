@@ -20,7 +20,7 @@ Feedback = 'noFeedback';
 roving = 'noRoving';
 flow = 4e3;
 bpFlag = 'noBP';
-screenNumber = 2;
+screenNumber = 0;
 % Screen('Preference', 'SkipSyncTests', 1);
 
 %% Load dependencies
@@ -40,7 +40,7 @@ switch procedure{1}
     
   case 'LR'
     %% L/R discrimination 
-    Nrep = 2*6; % 252 trials -> 13 min presentation time -> 20 min with breaks
+    Nrep = 100; % 252 trials -> 13 min presentation time -> 20 min with breaks
     M = [0,1];
     aziLR = [azi,0,-azi];
     

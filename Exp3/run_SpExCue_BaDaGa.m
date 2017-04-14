@@ -17,9 +17,11 @@ angularEccentricity = 30; %deg
 
 fs=2*24414; 
 
-trgVal.right = 100;
-trgVal.wrong = 101;
-trgVal.na = 102;
+trgVal.right = 251;
+trgVal.wrong = 252;
+trgVal.na = 253;
+trgVal.unpause = 254; % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
+trgVal.pause = 255;
 
 savename = fullfile('subjdata',[subID,'_',num2str(angularEccentricity),'deg_0',num2str(ntest)]);
 
@@ -103,7 +105,7 @@ for itrial=1:trialnumber
 
     if nblock > ceil((itrial-1)/trialsPerBlock)
       if flags.do_TDTon
-        send_event(myTDT, 254) % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
+        send_event(myTDT, trgVal.unpause) 
         pause(1);
       end
       iSessionSentence = ['Block # ' num2str(nblock) ' of ' num2str(NblocksTot),'\n\n',...
@@ -234,7 +236,7 @@ for itrial=1:trialnumber
     % Pause TDT
     if flags.do_TDTon
       pause(1)
-      send_event(myTDT, 255)  % per my .cfg file for the Biosemi, a trigger of 254 unpauses and 255 pauses the EEG recording
+      send_event(myTDT, trgVal.pause) 
       myTDT.reset();  % rewind and clear buffers
     end
     

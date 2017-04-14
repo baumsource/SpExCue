@@ -3,7 +3,14 @@ function stimu = genStimuBaDaGa(fs,azi,Nrep,subID,hrtfPath,lvl )
 % onsets of leading stream: 0s, 0.4s, 1.0s
 % onsets of lagging stream: 0s, 0.6s, 1.2s
 %
-% binary (logical: 1/0) trigger code: ITD (y/n), ILD (y/n), L/R, gender(f/m), lead/lag, 1st/2nd syllable
+% binary (logical: 1/0) trigger code: 
+%   (1)   distractor/target, 
+%   (2-3) ITD (y/n), ILD (y/n), 
+%   (4)   L/R, 
+%   (5)   gender(f/m), 
+%   (6-7) 3rd syllable, 2nd syllable
+%
+% trigger of cue: 250 (decimal)
 %
 % Requirements:
 % 1) SOFA API
@@ -15,6 +22,7 @@ onsets = [0.6,0.4]; % onsets of 2nd syllable for lagging and leading stream, res
 
 spatLbl = {'ITD','ILD','HRTF'};
 trgSpat = {'10','01','11'}; 
+trgValCue = 250;
 Nspat = length(spatLbl);
 
 % outputRMS = 0.1; % RMS of output (important to equalize level between different spatialization methods)
@@ -170,12 +178,25 @@ for iazi=1:length(azi) % azi
                     deltaLvl=lvlRove*(rand-0.5);
                     frame = db2mag(lvl+deltaLvl-100)*frame/mean(sqrt(mean(frame.^2))); % equalize overall intensity
                     trialnumber=trialnumber+1;
-                    trg0 = 0;
-                    trg1 = bin2dec([trgSpat{ispat},num2str(iazi-1),num2str(2-tarf),num2str(tarfast-1),'1']);
-                    trg2 = bin2dec([trgSpat{ispat},num2str(iazi-1),num2str(2-tarf),num2str(tarfast-1),'0']);
-                    triggers = [nOffset2Cue+1,trg0;...
-                                nOffset2Cue+nOffsetCue2Target+1,trg1;...
-                                nOffset2Cue+nOffsetCue2Target+nOnsets(tarfast)+1,trg2];
+                    
+                    trg0 = trgValCue;
+                    % target sound triggers
+                    trgT = ['0',trgSpat{ispat},num2str(iazi-1),num2str(2-tarf)];
+                    trgT1 = bin2dec([trgT,'00']); % 1st syllable (simultaneous onset)
+                    trgT2 = bin2dec([trgT,'01']); % 2nd target syllable (1st staggered)
+                    trgT3 = bin2dec([trgT,'10']); % 3rd target syllable (2nd staggered)
+                    % distractor sound triggers
+                    trgD = ['1',trgSpat{ispat},num2str(2-iazi),num2str(tarf-1)];
+                    trgD2 = bin2dec([trgD,'01']); % 2nd distractor syllable (1st staggered)
+                    trgD3 = bin2dec([trgD,'10']); % 3rd distractor syllable (2nd staggered)
+                    triggers = sortrows(fliplr([...
+                      trg0, 1+nOffset2Cue;...
+                      trgT1,1+nOffset2Cue+nOffsetCue2Target;...
+                      trgT2,1+nOffset2Cue+nOffsetCue2Target+nOnsets(tarfast);...
+                      trgT3,1+nOffset2Cue+nOffsetCue2Target+nOnsets(tarfast)+nOnsets(2);...
+                      trgD2,1+nOffset2Cue+nOffsetCue2Target+nOnsets(3-tarfast);...
+                      trgD3,1+nOffset2Cue+nOffsetCue2Target+nOnsets(3-tarfast)+nOnsets(2)]));
+                    
                     stimu(trialnumber)=struct('sound',frame,'relativeLevel',deltaLvl,...
                       'targetlocation',azi(iazi),'targetgender',gender(tarf),...
                       'seqtar',toneseqtar,'leading',leading,'distractseq',toneseqdis,...

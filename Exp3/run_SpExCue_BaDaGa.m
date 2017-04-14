@@ -1,13 +1,19 @@
-ntest=0;
-subID='RB';   
+subID='S27'; 
+
+% training runs
+ntest=10;
+Nrep = 1; % 
+
+% actual testing
+% ntest=1;
+% Nrep = 18; % repetitions of the same azi-sex-lead/lag-combination (twoTalker-condition: 24 trials per rep)
+
+trialsPerBlock = 50; % lasts 6.25 minutes
+
 hrtfPath = [];%'C:\Experiments\Robert\Experiments_GIT\HRTFs\';
-
-Nrep = 1;%25; % repetitions of the same azi-sex-lead/lag-combination (twoTalker-condition: 24 trials per rep)
-trialsPerBlock = 50;
-
-SPL = 60; % dB
+SPL = 75; % dB
 flags.do_debugMode = 1;
-kv.screenNumber = 0;
+kv.screenNumber = 0; %2
 flags.do_keyboard = 1;
 flags.do_bonus = 1;
 respDuration = 4000e-3; % sec
@@ -21,7 +27,7 @@ trgVal.right = 100;
 trgVal.wrong = 101;
 trgVal.na = 102;
 
-savename = fullfile('subjdata',[subID,'_',num2str(angularEccentricity),'deg_0',num2str(ntest)]);
+savename = fullfile('data',[subID,'_',num2str(angularEccentricity),'deg_0',num2str(ntest)]);
 
 if IsOSX
   flags.do_TDTon = false;
@@ -132,6 +138,7 @@ for itrial=1:trialnumber
     end
     if flags.do_debugMode
       disp((randstimu(itrial).triggers))
+      disp(randstimu(itrial).spatialization)
     end
   
 

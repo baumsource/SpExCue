@@ -66,8 +66,8 @@ if flags.do_keyboard
     fartherKey = KbName('f');
     equalKey = KbName('space');
 else % flags.do_responseBox
-    fartherKey = 1;
-    closerKey = 2;
+    fartherKey = 4;
+    closerKey = 8;
 end
 
 MVals = [0,0.5,1,pi];

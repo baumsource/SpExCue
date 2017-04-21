@@ -12,7 +12,7 @@ procedure = {...
 %   'LR';...
   'distance';...
   }; 
-azi = -90;
+azi = 90;
 
 %% General settings
 HRTFs = 'HRCeq';
@@ -22,9 +22,9 @@ flow = 1e3;
 bpFlag = '';
 screenNumber = 0;
 debugMode = 'debugMode';
-TDTflag = 'TDToff';
+TDTflag = '';
 jitter = 0;
-responseDevice = 'keyboard';
+responseDevice = '';
 % Screen('Preference', 'SkipSyncTests', 1);
 
 %% Load dependencies
@@ -40,7 +40,7 @@ sca
 switch procedure{1}
   case 'screening'
         
-%     SpExCue_Exp1_screening(ID,'azi',[-90,0,90],HRTFs,'screenNumber',screenNumber)
+    SpExCue_Exp2a_screening(ID,'azi',[-90,0,90],HRTFs,'screenNumber',screenNumber)
     
   case 'LR'
     %% L/R discrimination 
@@ -59,7 +59,7 @@ switch procedure{1}
     
   case 'distance'
     %% distance discrimination 
-    Nrep = 2; % 840 trials -> 42 min presentation time -> 60 min with breaks
+    Nrep = 2*8; % 840 trials -> 42 min presentation time -> 60 min with breaks
     M = [0,0.5,1];
     
     SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...

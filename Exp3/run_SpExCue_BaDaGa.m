@@ -1,19 +1,23 @@
-subID='S27'; 
+Screen('Preference', 'SkipSyncTests', 1);
+
+subID='S21'; 
 
 % training runs
-ntest=10;
-Nrep = 1; % 
+% ntest= 11;
+% Nrep = 2; %
+
+
 
 % actual testing
-% ntest=1;
-% Nrep = 18; % repetitions of the same azi-sex-lead/lag-combination (twoTalker-condition: 24 trials per rep)
+ntest=1;
+Nrep = 18; % repetitions of the same azi-sex-lead/lag-combination (twoTalker-condition: 24 trials per rep)
 
 trialsPerBlock = 50; % lasts 6.25 minutes
 
 hrtfPath = [];%'C:\Experiments\Robert\Experiments_GIT\HRTFs\';
 SPL = 75; % dB
-flags.do_debugMode = 1;
-kv.screenNumber = 0; %2
+flags.do_debugMode = 0;
+kv.screenNumber = 1; %2
 flags.do_keyboard = 1;
 flags.do_bonus = 1;
 respDuration = 4000e-3; % sec

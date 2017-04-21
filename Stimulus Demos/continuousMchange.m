@@ -1,9 +1,9 @@
 % listen to concatenated stimuli with regularly ordered spectral contrast
 
 ID = 'RB';
-M = 0:0.5:1;
-% M = [1,0,1,0];
-pos = [90,0];
+% M = [0,0,1,1,0,0];
+M = [1,1,0,0,1,1];
+pos = [30,0];
 flow = 1e3;
 fhigh = 16e3;
 
@@ -11,7 +11,12 @@ fhigh = 16e3;
 % M = 1;
 % pos = [90,0;60,0];
 
-stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'HRCeq');
+fs = 48e3;
+sig = noise(2*fs,1);
+HRTFpath = strrep(which('SpExCue_stim'),fullfile('MATLAB_general','SpExCue_stim.m'),'HRTFs');
+Obj = SOFAload(fullfile(HRTFpath,[ID '_eq.sofa']));
+stim = SpExCue_SOFAspat(sig,Obj,pos(1),pos(2),M);
+% stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'HRCeq');
 
 % Concatenate longer set of Ms
 % concatStim = stim.sig{1};
@@ -20,8 +25,8 @@ stim = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'
 % end
 
 % OR: Create a pair as in experiment
-concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
-          stim.fs,1.2,.6,.1);
+% concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
+%           stim.fs,1.2,.6,.1);
         
 % stimDTF = SpExCue_stim(M,ID,'pos',pos,'continuousNoise','flow',flow,'fhigh',fhigh,'SPL',60,'DTF');
 % concatStim = SpExCue_crossfade(stimDTF.sig{1},stim.sig{1},...
@@ -43,4 +48,5 @@ concatStim = SpExCue_crossfade(stim.sig{1},stim.sig{2},...
 
 %% Playback
 % pause
-sound(concatStim,stim.fs)
+% sound(concatStim,stim.fs)
+sound(stim,fs)

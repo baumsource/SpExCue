@@ -3,7 +3,7 @@ clear
 %% Settings
 
 flags.do_blinkICrej = true;
-conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCloserVsFarther'
+conditionSet = 'Onset'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCloserVsFarther'
 % all: 1
 % grand average: 2
 % additional designs for 'Mchange': 
@@ -11,7 +11,7 @@ conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCl
 % 8: M1-0vsMi-0, 9: M0-1vsMi-1, 10: M0-ivsM1-i
 % 11: all with D=0 collapsed, 12: Mi-1vsMi-0 (no prior expectation)
 % 13: all except D=0
-design = 13;
+design = 1;
 
 
   
@@ -24,13 +24,13 @@ stats.mcorrect = 'none'; % 'none' or 'MonteCarloCluster'
 plotflag.topo = true;
 plotflag.erp = true;
 plotflag.compAmp = true;
-flags.do_print = false;
+flags.do_print = true;
 
 % ERP evaluation option
-flags.do_ihd = true; % evaluate inter-hemispheric differences in ERPs (right - left
+flags.do_ihd = false; % evaluate inter-hemispheric differences in ERPs (right - left
 
 % Precomp settings
-precomp.redo = 'off';
+precomp.redo = 'on';
 precomp.data = 'channels'; % 'components' or 'channels'
 precomp.erp = 'on';
 precomp.scalp = 'on';
@@ -97,7 +97,7 @@ switch conditionSet
   case 'OnsetToCloserVsFarther'
     condition = {'OnsetToCloser','OnsetToFarther'};
   case 'Mchange'
-    condition = {'M1-0','M1-i','Mi-0','M0-0','Mi-i','M1-1','M0-i','Mi-1','M0-1'};
+    condition = {'M1-0','M1-i','Mi-0','Mx-x','M0-i','Mi-1','M0-1'};
   case 'CloserVsFarther'
     condition = {'Closer','Farther'};
   otherwise
@@ -143,7 +143,7 @@ else
       'M1-0vsMi-0',{'M1-0','Mi-0'};...
       'M0-1vsMi-1',{'M0-1','Mi-1'};...
       'M0-ivsM1-i',{'M0-i','M1-i'};...
-      'all_D0pooled',{'M1-i','M1-0','Mi-0','Mi-1','M0-1','M0-i',{'M0-0','Mi-i','M1-1'}};...
+      'all_D0pooled',{'M1-i','M1-0','Mi-0','Mi-1','M0-1','M0-i','Mx-x'};...
       'Mi-1vsMi-0',{'Mi-1','Mi-0'};...
       'noD0',{'M1-i','M1-0','Mi-0','Mi-1','M0-1','M0-i'}};
     for dd = 1:length(MchangeDesigns)

@@ -19,13 +19,14 @@ function [stim,Obj] = SpExCue_stim( M,ID,varargin )
 %     fhigh : higher cut-off frequency. Default is 18 kHz.
 %     SPL   : sound pressure level in dB (RMS of 1 represents 100 dB).
 %             Default is 70 dB.
-%     signalDuration  : signal duration in seconds. Default is 1.6s.
+%     individualSignalDur  : signal duration in seconds. Default is 1.6s.
 %     fadeDuration    : fade in/out duration in seconds. Default is 0.05s.
 %
 %   Optional flags:
 %     noiseBurst   : Gaussian white noise burst.
 %     speech  : Speech syllable.
 %     DTF     : Directional transfer functions.
+%     noBP    : no band-pass filtering.
 
 % AUTHOR: Robert Baumgartner
 

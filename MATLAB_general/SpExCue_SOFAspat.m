@@ -1,12 +1,15 @@
-function [out, azi, ele, idx] = SpExCue_SOFAspat(in,Obj,azi,ele)
+function [out, azi, ele, idx] = SpExCue_SOFAspat(in,Obj,azi,ele,C,flow,fhigh)
 % SOFAspat
 % [out, azi, ele, idx] = SpExCue_SOFAspat(in,Obj,azi,ele) spatializes the sound IN using
 % the HRTFs from OBJ according to the trajectory given in AZI and ELE.
 % Input: 
-%		in: vector with the sound
-%		Obj: SOFA object containing the HRTFs
+%		in:     vector with the sound
+%		Obj:    SOFA object containing the HRTFs
 %		azi, ele: vectors with the trajectory (in degrees) independent for
 %							azimuth and elevation
+%		C:      simultaneous change in spectral contrast
+%		flow,fhigh: lower and upper frequency limits of spectral contrast
+%               manipulations (default: flow = 1e3, fhigh = 16e3)
 % 
 % Output: 
 %		out: binaural signal
@@ -38,6 +41,15 @@ if min(azi)<0,	% Check for the required coordinate system
 	Obj.SourcePosition(:,1)=sph2nav(Obj.SourcePosition(:,1)); % if negative azimuths are required, swith to -90/+90 system
 end
 N=Obj.API.N;
+if ~exist('C','var')
+  C = 1;
+end
+if ~exist('flow','var')
+  flow = 1e3;
+end
+if ~exist('fhigh','var')
+  fhigh = 16e3;
+end
 
 %% resize the input signal to be integer multiple of HRIR
 L=length(in);
@@ -55,6 +67,11 @@ if length(ele)>1,
 	ele= interp1(0:1/(length(ele)-1):1,ele,0:1/(S-1):1); 
 else
 	ele=repmat(ele,1,S);
+end;
+if length(C)>1
+  C = interp1(0:1/(length(C)-1):1,C,0:1/(S-1):1);
+else
+	C=repmat(C,1,S);
 end;
 
 %% create a 2D-grid with nearest positions of the moving source
@@ -87,12 +104,15 @@ window=hanning(N);
 ii=0;
 jj=1;
 iiend=L-N;
-while ii<iiend    
+while ii<iiend 
+  if jj==1 ||  C(jj)~=C(jj-1)
+    ObjC = SpExCue_setMagVar(Obj,C(jj),flow,fhigh);
+  end
 		segT=in(ii+1:ii+N).*window;	% segment in time domain
 		segF=fft(segT,2*N);	% segment in frequency domain with zero padding
 		%-----------
-		segFO(:,1)=squeeze(fft(Obj.Data.IR(idx(jj),1,:),2*N)).*segF;
-		segFO(:,2)=squeeze(fft(Obj.Data.IR(idx(jj),2,:),2*N)).*segF;
+		segFO(:,1)=squeeze(fft(ObjC.Data.IR(idx(jj),1,:),2*N)).*segF;
+		segFO(:,2)=squeeze(fft(ObjC.Data.IR(idx(jj),2,:),2*N)).*segF;
 		%-----------
 		segTO=real(ifft(segFO));   % back to the time domain
 		out(ii+1:ii+2*N,:)=out(ii+1:ii+2*N,:)+segTO;  % overlap and add

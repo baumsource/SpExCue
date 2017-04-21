@@ -79,7 +79,8 @@ end
 
 if flags.do_groupD
   grouping = {31,32,21,[11,22,33],12,23,13};
-  MlegendLabel = {'D =-1   ','D =-2/3','D =-1/3','D = 0   ','D = 1/3','D = 2/3','D = 1   '};
+%   MlegendLabel = {'D =-1   ','D =-2/3','D =-1/3','D = 0   ','D = 1/3','D = 2/3','D = 1   '};
+  MlegendLabel = {'M1-0','M1-i','Mi-0','Mx-x','M0-i','Mi-1','M0-1'};
   
 elseif flags.do_groupM
   grouping = {[33,23,13],[32,22,12],[31,21,11]};
@@ -180,22 +181,33 @@ for ll = 1:length(IDs)
     
     %% Dipole fitting
     
-    %% Check # trials
-    
+    %% Equalize # trials
+    NumTr = zeros(1,length(EEG));
+    for ii = 1:length(EEG)
+      NumTr(ii) = EEG(ii).trials;
+    end
+    minNumTr = min(NumTr);
+    for ii = 1:length(EEG)
+      triSel = round(1:NumTr(ii)/minNumTr:NumTr(ii)); % retain every NumTr(ii)/minNumTr-th trial
+      EEG(ii) = pop_select(EEG(ii),'trial',triSel);
+    end
+    for ii = 1:length(EEG) % double-check
+      NumTrials(ll,ii) = EEG(ii).trials;
+    end
     
     %% Export dataset
-  for ii = 1:length(EEG)
-    % Check # trials
-    NumTrials(ll,ii) = EEG(ii).trials;
-    
-    if flags.do_export
-      fnExport = strrep(filename,'.set',['_',MlegendLabel{ii},'.set']);
-  %     fnExport = regexprep(fnExport,'^[\d\w~!@#$%^&()_\-{}]',''); % problem: removes first character
-      EEG(ii).subject = ID;
-      EEG(ii).condition = MlegendLabel{ii};
-      pop_saveset(EEG(ii),'filename', fullfile(kv.filepath,fnExport));
+    for ii = 1:length(EEG)
+      % Check # trials
+  %     NumTrials(ll,ii) = EEG(ii).trials;
+
+      if flags.do_export
+        fnExport = strrep(filename,'.set',['_',MlegendLabel{ii},'.set']);
+    %     fnExport = regexprep(fnExport,'^[\d\w~!@#$%^&()_\-{}]',''); % problem: removes first character
+        EEG(ii).subject = ID;
+        EEG(ii).condition = MlegendLabel{ii};
+        pop_saveset(EEG(ii),'filename', fullfile(kv.filepath,fnExport));
+      end
     end
-  end
 end
 
 NumTrialsTab = array2table(NumTrials,'RowNames',IDs,'VariableNames',strrep(MlegendLabel,'-','to'));

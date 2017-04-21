@@ -1,5 +1,8 @@
 function stimu = genStimuBaDaGa(fs,azi,Nrep,subID,hrtfPath,lvl )
 % genStimuBaDaGa - two differen-sex talkers at +/-30 degrees
+%
+% Usage: stimu = genStimuBaDaGa(fs,azi,Nrep,subID,hrtfPath,lvl )
+%
 % onsets of leading stream: 0s, 0.4s, 1.0s
 % onsets of lagging stream: 0s, 0.6s, 1.2s
 %

@@ -123,7 +123,7 @@ if flags.do_TDTon
 end
 
 %% Initialize the graphical interface for Psychtoolbox
-
+Screen('Preference', 'SkipSyncTests', 1);
 PsychDefaultSetup(1); % makes sure Screen is functional and unifies keyCodes across OS
 HideCursor;
 

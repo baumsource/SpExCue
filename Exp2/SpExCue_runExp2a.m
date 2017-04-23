@@ -6,7 +6,7 @@
 % myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
-ID = 'RB'; % RS2
+ID = 'S21'; % RS2
 procedure = {... 
 %   'screening';...
 %   'LR';...
@@ -21,7 +21,7 @@ roving = 'noRoving';
 flow = 1e3;
 bpFlag = '';
 screenNumber = 0;
-debugMode = 'debugMode';
+debugMode = '';
 TDTflag = '';
 jitter = 0;
 responseDevice = '';

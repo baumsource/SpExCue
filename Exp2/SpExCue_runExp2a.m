@@ -6,7 +6,7 @@
 % myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
-ID = 'RB'; % RS2
+ID = 'S21'; % S21
 procedure = {... 
 %   'screening';...
 %   'LR';...
@@ -20,8 +20,8 @@ Feedback = 'noFeedback';
 roving = 'noRoving';
 flow = 1e3;
 bpFlag = '';
-screenNumber = 0;
-debugMode = 'debugMode';
+screenNumber = 1;
+debugMode = '';
 TDTflag = '';
 jitter = 0;
 responseDevice = '';
@@ -40,7 +40,7 @@ sca
 switch procedure{1}
   case 'screening'
         
-    SpExCue_Exp2a_screening(ID,'azi',[-90,0,90],HRTFs,'screenNumber',screenNumber)
+    SpExCue_Exp2a_screening(ID,'azi',[-90,0,90],HRTFs,'screenNumber',screenNumber,debugMode)
     
   case 'LR'
     %% L/R discrimination 

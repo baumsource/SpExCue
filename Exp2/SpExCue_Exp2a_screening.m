@@ -116,10 +116,14 @@ else
   fs = 48.8e3;
 end
 
-subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,pos,round(fs),'argimport',flags,kv );
+subj.stim = SpExCue_stim( kv.Mcomb,subj.ID,'argimport',flags,kv,'pos',pos,'fs',round(fs) );
+subj.stimGap = SpExCue_stim( kv.Mcomb,subj.ID,'argimport',flags,kv,'pos',pos,'fs',round(fs),'individualSignalDur',0.5 );
 
+sigpair = cell(2,Npos);
 for pp = 1:Npos
-  sigpair{pp} = SpExCue_crossfade(subj.stim.sig{1,pp},subj.stim.sig{2,pp},...
+  sigpair{1,pp} = SpExCue_crossfade(subj.stim.sig{1,pp},subj.stim.sig{2,pp},...
+            subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
+  sigpair{2,pp} = SpExCue_crossfade(subj.stimGap.sig{1,pp},subj.stimGap.sig{2,pp},...
             subj.stim.fs,kv.dur,kv.dur/2,kv.xFadeDur);
 end
 
@@ -142,6 +146,7 @@ movement = cell(Npos,1);
 for pp = 1:Npos
   keyCodeVal = 0;
   played = false;
+  isi = 1;
   while not(any(keyCodeVal==[key.none,key.distance,key.elevation]) && played)
     [tmp,keyCode] = KbWait([],2);
     keyCodeVal = find(keyCode,1);
@@ -149,12 +154,13 @@ for pp = 1:Npos
     if keyCodeVal == key.play
       pause(.1)
       if flags.do_TDTon
-        myTDT.load_stimulus(sigpair{pp});
+        myTDT.load_stimulus(sigpair{isi,pp});
         myTDT.play_blocking()
       else
-        sound(sigpair{pp},fs)
+        sound(sigpair{isi,pp},fs)
       end
       played = true;
+      isi = mod(isi,2)+1;
     end
   end
   
@@ -203,6 +209,7 @@ if not(all(distfalg))
   for pp = 1:Npos
       keyCodeVal = 0;
       played = false;
+      isi = 1;
       while not(any(keyCodeVal==[key.yes,key.no]) && played)
         [tmp,keyCode] = KbWait([],2);
         keyCodeVal = find(keyCode,1);
@@ -210,12 +217,13 @@ if not(all(distfalg))
         if keyCodeVal == key.play
           pause(.1)
           if flags.do_TDTon
-            myTDT.load_stimulus(sigpair{pp});
+            myTDT.load_stimulus(sigpair{isi,pp});
             myTDT.play_blocking()
           else
-            sound(sigpair{pp},fs)
+            sound(sigpair{isi,pp},fs)
           end
           played = true;
+          isi = mod(isi,2)+1;
         end
       end
 

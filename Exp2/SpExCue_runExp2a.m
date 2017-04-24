@@ -59,9 +59,12 @@ switch procedure{1}
     
   case 'distance'
     %% distance discrimination 
-    Nrep = 2*8; % 840 trials -> 42 min presentation time -> 60 min with breaks
     M = [0,0.5,1];
+    SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',1,'responseBox','flow',flow,bpFlag,...
+      Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
+      'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
     
+    Nrep = 2*8; 
     SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
       'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)

@@ -6,7 +6,7 @@
 % myTDT = tdt('playback_2channel_16bit', 48, 7, 0.005 )
 
 %% Listener-specific settings
-ID = 'S21'; % S21
+ID = 'S15'; % S21
 procedure = {... 
 %   'screening';...
 %   'LR';...
@@ -20,11 +20,11 @@ Feedback = 'noFeedback';
 roving = 'noRoving';
 flow = 1e3;
 bpFlag = '';
-screenNumber = 1;
+screenNumber = 2;
 debugMode = '';
 TDTflag = '';
 jitter = 0;
-responseDevice = '';
+responseDevice = 'keyboard';
 % Screen('Preference', 'SkipSyncTests', 1);
 
 %% Load dependencies
@@ -60,15 +60,15 @@ switch procedure{1}
   case 'distance'
     %% distance discrimination 
     M = [0,0.5,1];
-    SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',1,'responseBox','flow',flow,bpFlag,...
+    SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',2,'responseBox','flow',flow,bpFlag,...
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
       'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
-    
-    Nrep = 2*8; 
-    SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
-      Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
-      'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
-  
+    if input('Continue?')
+        Nrep = 2*8; 
+        SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
+            Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
+            'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
+    end
 %     cd analysis
 %     SpExCue_analyzeExp2BTL(ID,procedure{1});
 %     cd ..

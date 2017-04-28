@@ -1,4 +1,4 @@
-function SpExCue_BaDaGa(subID,Nrep,fnext,flags,kv)
+function bonus = SpExCue_BaDaGa(subID,Nrep,fnext,flags,kv)
 % SpExCue_BaDaGa - experimental procedure for syllable segregation with
 % different spatial cues
 % 
@@ -120,6 +120,7 @@ KbStrokeWait;
 %% Trial presentation
 correctcount=zeros(length(spat),1);
 NblocksTot = ceil(trialnumber/trialsPerBlock);
+bonus = 0;
 for itrial=1:trialnumber
   
     disp(itrial)
@@ -233,6 +234,7 @@ for itrial=1:trialnumber
     end
     DrawFormattedText(win,endSentence,.2*x_center,'center',white,120,0,0,1.5);
     Screen('Flip',win);
+    disp(endSentence)
     
     % Pause TDT
     if flags.do_TDTon

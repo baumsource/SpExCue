@@ -64,10 +64,17 @@ switch procedure{1}
       Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
       'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
     if input('Continue?')
+<<<<<<< HEAD
         Nrep = 2*8; 
         SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
             Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
             'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
+=======
+      Nrep = 2*8; 
+      SpExCue_Exp2a(ID,'M',M,'azi',azi,'Nrep',Nrep,'responseBox','flow',flow,bpFlag,...
+        Feedback,roving,procedure{1},HRTFs,'screenNumber',screenNumber,...
+        'changeM',debugMode,TDTflag,'jitter',jitter,responseDevice)
+>>>>>>> origin/master
     end
 %     cd analysis
 %     SpExCue_analyzeExp2BTL(ID,procedure{1});

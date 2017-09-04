@@ -1,31 +1,27 @@
 ERPanalysis = true;
 
+redoStudy = true;
+
 currentDesign = 1;
 
-precomp.redo = 'on';
+precomp.redo = 'off';
 
 designs = {...
   'attended',{'ITD','ILD','HRTF'},{'ITD','ILD','HRTF'};...
   'unattended',{'ITDu','ILDu','HRTFu'},{'ITDu','ILDu','HRTFu'};...
   'attendedVsUnattended',{{'ITD','ILD','HRTF'},{'ITDu','ILDu','HRTFu'}},{'attended','unattended'};...
-%   'motion',{{'C0_left','C0_right'},{'C1_left','C1_right'},{'KEMAR_left','KEMAR_right'}},{'C = 0','C = 1','KEMAR'};...
-%   'LR',{{'C0_left','C1_left','KEMAR_left'},{'C0_right','C1_right','KEMAR_right'}},{'left','right'}
 };
 
 %% Load/create STUDY
-% Add paths
-if not(exist('eeglab','file'))
-  addpath('/Users/rbaumgartner/Documents/MATLAB/eeglab')
-  eeglab
-end
+eeglab
 
 experimentString = 'Exp3eeg';
-datapath = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Exp3/data/';%string with the filename
+datapath = fullfile('..','data');%string with the filename
 
 % subjects
 tmp = load('SpExCue_Exp3eeg_subjects.mat');
 subjects = tmp.subject;
-% subjects = subjects(2:4,:); disp('only S21, S15, and S28')
+% subjects = subjects(2:4,:); disp('only ...')
 Ns = height(subjects);
 
 % configurations
@@ -35,7 +31,7 @@ cond = cnfg.cond;
 
 fnstudy = ['study_',experimentString,'.study'];
 if ERPanalysis; fnstudy = strrep(fnstudy,'.','_ERP.'); end
-if 0%exist(fullfile(datapath,fnstudy),'file')
+if exist(fullfile(datapath,fnstudy),'file') && not(redoStudy)
   [STUDY, ALLEEG] = pop_loadstudy('filename', fullfile(datapath,fnstudy));
 else
   fnX = [experimentString,'_Sxx_clean_Cxx.set'];
@@ -115,15 +111,54 @@ precompsettings = {'interp', 'on', 'recompute', precomp.redo,...
   'ersp', precomp.ersp, 'itc', precomp.ersp, 'erspparams', erspparams};
 [STUDY,ALLEEG] = std_precomp(STUDY, ALLEEG, precomp.data,precompsettings{:});
 
-compLabl = {  'P1',   'N1',  'P2' };
-compWin = {[30,100],[80,150],[150,250]};
+
+%% Retrieve component windows from grand average GFP
+STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
+      'timerange',[-600,1000],'averagechan','off','topotime',[]);
+[STUDY,erpdata,erptimes] = std_erpplot(STUDY,ALLEEG,'noplot','on','channels',ChanLbls(1:32));
+grandaverage = mean(cat(3,erpdata{:}),3);
+gavgGFP = std(grandaverage,0,2);
+figure
+XLim = [-199,799];
+plot(erptimes,gavgGFP,'k')
+xlabel('Time (ms)')
+ylabel('Grand average global field potential (µV)')
+set(gca,'XLim',XLim)
+
+% grand-average GFP shows a distinct peak in the N1 range 
+% ADJUST:
+compLabl = {'N1'};
+compWin = {[100,180]};
+
+% check by plotting on top of GFP
+hold on
+YLim = get(gca,'YLim');
+for icomp = 1:length(compWin)
+  plot(compWin{icomp}([1,1]),YLim,'k:')
+  plot(compWin{icomp}(1+[1,1]),YLim,'k:')
+  text(mean(compWin{icomp}),YLim(2)-0.05,compLabl{icomp},'HorizontalAlignment','center')
+end
+
+
+%% Topo plots
+STUDY = pop_erpparams(STUDY, 'plotconditions', 'apart','averagechan','off');
+ylimTopo = 3*[-1,+1];
+for ii = 1:length(compWin)
+  [STUDY,erpdata] = std_erpplot(STUDY,ALLEEG,'channels',ChanLbls(cnfg.eegChanNum), ...
+        'topotime',compWin{ii},'ylim',ylimTopo);
+end
+
+% ADJUST channel of interest cluster:
+chanSel = {'Pz'};
+disp(['Channel(s) of interest: ', chanSel])
 
 %% ERPs
 STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
       'timerange',[-600,1000],'averagechan','on','topotime',[]);
 subsel = [subjects.name;{''}];
 for ss=1:length(subsel)
-  [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',{'Cz'},'subject',subsel{ss});
+  [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',chanSel,'subject',subsel{ss});
+  ylabel([chanSel{:},' potential (µV)'])
   title(subsel{ss})
   % legend(designs{currentDesign-1,3},'Location','northwest')
   % Adjust line colors to following bar plot
@@ -135,7 +170,7 @@ for ss=1:length(subsel)
   % Add vertical lines to separate time windows
   hold on
   ylim = get(gca,'YLim');
-  for ii = 2;%1:length(compWin)
+  for ii = 1:length(compWin)
     plot(compWin{ii}(1)*[1,1],ylim,'k:')
     plot(compWin{ii}(2)*[1,1],ylim,'k:')
   end
@@ -159,84 +194,90 @@ figure
 differpdata = cat(3,erpdata{1:2:end}) - cat(3,erpdata{2:2:end});
 plot(erptimes,squeeze(mean(differpdata,2)))
 xlabel('Time (ms)')
-ylabel('Cz difference potential (µV)')
+ylabel([chanSel{:},' difference potential (µV)'])
+legend(STUDY.condition{1:2:end})
 set(gca,'XLim',[-199,799])
 
 %% ERP metrics
 
-% peak-to-peak and N1
-trange = [50,200];
-idt = erptimes >= trange(1) & erptimes <= trange(2);
-idtN1 = erptimes >= compWin{2}(1) & erptimes <= compWin{2}(2); 
-CzP2P = nan(length(erpdata),Ns);
-N1 = CzP2P;
-kk = 1;
-for isub = 1:Ns
-  for icond = 1:length(cond)
-    tmperp = mean(ALLEEG(kk).data(32,:,:),3);
-    kk = kk+1;
-    CzP2P(icond,isub) = range(tmperp(idt));
-    N1(icond,isub) = min(tmperp(idtN1));%abs(mean(tmperp(idtN1)));
-  end
-end
-disp(Ntrials)
-CzP2PattenInc = CzP2P(1:3,:) - CzP2P(4:6,:);
-N1attenInc = N1(1:3,:) - N1(4:6,:);
-% for icond = 1:length(erpdata)
-%   CzP2P(icond) = range(erpdata{icond}(idt));
+% peak-to-peak difference
+% trange = [50,200];
+% idt = erptimes >= trange(1) & erptimes <= trange(2);
+% CzP2P = nan(length(erpdata),Ns);
+% kk = 1;
+% for isub = 1:Ns
+%   for icond = 1:length(cond)
+%     tmperp = mean(ALLEEG(kk).data(32,:,:),3);
+%     kk = kk+1;
+%     CzP2P(icond,isub) = range(tmperp(idt));
+%   end
 % end
-% CzP2PattenInc = CzP2P(1:2:end) - CzP2P(2:2:end);
-figure;
-% bar(CzP2PattenInc)
+% CzP2PattenInc = CzP2P(1:3,:) - CzP2P(4:6,:);
 % plot(CzP2PattenInc)
 % title('Peak-to-peak range 50-200 ms at Cz')
-plot(N1attenInc)
-title('N1 magnitude difference at Cz')
-ylabel('Attended - unattended (µV)')
-set(gca,'XTick',1:3,'XTickLabel',designs{currentDesign,3})
-legend(subjects.name)
+
+% N1 difference
+% icomp = ismember(compLabl,'N1');
+% idtN1 = erptimes >= compWin{icomp}(1) & erptimes <= compWin{icomp}(2); 
+% N1 = nan(length(erpdata),Ns);
+% kk = 1;
+% chanNum = ismember(ChanLbls,chanSel);
+% for isub = 1:Ns
+%   for icond = 1:length(cond)
+%     tmperp = mean(ALLEEG(kk).data(chanNum,:,:),3);
+%     kk = kk+1;
+%     N1(icond,isub) = min(tmperp(idtN1));%abs(mean(tmperp(idtN1)));
+%   end
+% end
+% disp(Ntrials)
+% N1attenInc = N1(1:3,:) - N1(4:6,:);
+% figure;
+% plot(N1attenInc)
+% title(['N1 magnitude difference at ',chanSel{:}])
+% ylabel('Attended - unattended (µV)')
+% set(gca,'XTick',1:3,'XTickLabel',{ALLEEG(1:3).condition})
+% legend(subjects.name)
 
 %% average potentials 
-CzPeak = nan(length(erpdata),length(compWin));
+STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
+      'timerange',[-600,1000],'averagechan','on','topotime',[]);
+[STUDY,erpdata,erptimes] = std_erpplot(STUDY,ALLEEG,'channels',chanSel,'noplot','on');
+icomp = ismember(compLabl,'N1');
+idt = erptimes >= compWin{icomp}(1) & erptimes <= compWin{icomp}(2);
+tmp_erptimes = erptimes(idt);
+CzPeak = nan(length(erpdata),Ns);
 CzLat = CzPeak;
-for icomp = 1:length(compWin)
-  idt = erptimes >= compWin{icomp}(1) & erptimes <= compWin{icomp}(2);
-  tmp_erptimes = erptimes(idt);
-  for icond = 1:length(erpdata)
-    [CzPeak(icond,icomp),Ipeak] = max(abs(erpdata{icond}(idt)));
-    CzLat(icond,icomp) = tmp_erptimes(Ipeak);
-  end
+for icond = 1:length(erpdata)
+  [CzPeak(icond,:),Ipeak] = max(abs(erpdata{icond}(idt,:)));
+  CzLat(icond,:) = tmp_erptimes(Ipeak);
 end
 
 % Bar plot for ERP metrics
 figure
 subplot(1,2,1)
 bar(CzPeak')
-ylabel('Peak amplitude (µV)')
-set(gca,'XTickLabel',compLabl)
+ylabel('Peak magnitude (µV)')
+set(gca,'XTickLabel',subjects.name)
 % legend(designs{currentDesign-1,3},'Location','northwest')
 subplot(1,2,2)
 bar(CzLat')
 ylabel('Peak latency (ms)')
-set(gca,'XTickLabel',compLabl)
-if currentDesign == 1
-  legend(STUDY.condition,'Location','northwest')
-else
-  legend(designs{currentDesign-1,3},'Location','northwest')
-end
+set(gca,'XTickLabel',subjects.name)
+legend(STUDY.condition,'Location','northwest')
+
 
 %% Inter-hemispheric differences
 STUDY = pop_erpparams(STUDY, 'plotconditions', 'apart','averagechan','off');
-[STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',ChanLbls(cnfg.eegChanNum));
+[STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',ChanLbls(cnfg.eegChanNum),'noplot','on');
 chL = [1:12,14,15];
 chR = 17:30;
-rmsL = nan(length(erpdata),length(compWin));
-rmsR = CzPeak;
+rmsL = nan(length(erpdata),length(compWin),Ns);
+rmsR = rmsL;
 for icomp = 1:length(compWin)
   idt = erptimes >= compWin{icomp}(1) & erptimes <= compWin{icomp}(2);
   for icond = 1:length(erpdata)
-    rmsL(icond,icomp) = rms(max(abs(erpdata{icond}(idt,chL))));
-    rmsR(icond,icomp) = rms(max(abs(erpdata{icond}(idt,chR))));
+    rmsL(icond,icomp,:) = rms(max(abs(erpdata{icond}(idt,chL,:))));
+    rmsR(icond,icomp,:) = rms(max(abs(erpdata{icond}(idt,chR,:))));
   end
 end
 RHD = rmsR-rmsL; % right-hemispheric dominance
@@ -249,17 +290,8 @@ if currentDesign == 4 % left/right
   bar(IHAD')
   ylabel('Inter-hemispheric contralaterality (µV)')
 else
-  bar(RHD')
+  bar(squeeze(RHD)')
   ylabel('Right-hemispheric dominance (µV)')
 end
-set(gca,'XTickLabel',compLabl)
-legend(designs{currentDesign,3},'Location','northwest')
-
-%% Topo plots
-STUDY = pop_erpparams(STUDY, 'plotconditions', 'apart','averagechan','off');
-compWin = {[40,80],[90,130],[140,220],[230,370]}; 
-ylimTopo = 5*[-1,+1];
-for ii = 1:length(compWin)
-  [STUDY,erpdata] = std_erpplot(STUDY,ALLEEG,'channels',ChanLbls(cnfg.eegChanNum), ...
-        'topotime',compWin{ii},'ylim',ylimTopo);
-end
+set(gca,'XTickLabel',subjects.name)
+legend(STUDY.condition,'Location','northwest')

@@ -1,3 +1,5 @@
+%% Evaluate behavioral results from SpExCue Exp. 3
+
 fnPath = '../data';
 
 % subjects

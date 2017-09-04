@@ -1,9 +1,9 @@
 % General processing pipeline for SpExCue Exp. 3
 
 % Primary path definitions required for this analysis
-dirBDF = '/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Exp3/data/';%string with the filename
+eeglab_analysis_scripts = fullfile('..','..','Matlab_general','eeglab_analysis');
+dirBDF = fullfile('..','data'); % BDF data directory
 experimentString = 'Exp3eeg';  % String to label experiment number for the saved eeglab dataset files
-
 cnfg.BDFfn = fullfile(dirBDF,[experimentString,'_Sxx']);
 
 cnfg.dirLOCS = dirBDF;
@@ -25,7 +25,7 @@ cnfg.finalThreshold = 50; % post IC rejection
 cnfg.stimulusEpochRange = [-.5,4];
 cnfg.finalEpochRange = [-0.6,1];%[-1.0,2.5];
 
-cnfg.timeLockedEventNum = {250};%num2cell(17:2:63);
+cnfg.timeLockedEventNum = {250}; % cue trigger
 
 % time-locked to first syllable
 % cnfg.cond =  {cnfg.timeLockedEventNum(1:4),'ITD_right'; ...
@@ -35,7 +35,8 @@ cnfg.timeLockedEventNum = {250};%num2cell(17:2:63);
 %               cnfg.timeLockedEventNum(17:20),'HRTF_right'; ...
 %               cnfg.timeLockedEventNum(21:24),'HRTF_left'};
             
-% time-locked to second (embedded) syllable
+% time-locked to second (embedded) syllable (NOTE: use/see
+% SpExCue_Exp3_trigCode for help/info)
 attend = num2cell(17:4:61);
 unattend = num2cell(81:4:125);
 cnfg.cond =  {attend(1:4),'ITD'; attend(5:8),'ILD'; attend(9:12),'HRTF';...
@@ -44,13 +45,15 @@ save([experimentString,'_cnfg'],'cnfg')
             
 tmp = load('SpExCue_Exp3eeg_subjects.mat');
 subjects = tmp.subject;
+
+% Select subjects as required
 subjects = subjects(5,:); disp(['only ',subjects.name])
 
 %% Add paths
 if not(exist('eeglab','file'))
-  addpath('/Users/rbaumgartner/Documents/MATLAB/eeglab')
+  error('RB: eeglab not available.')
 end
-addpath('/Users/rbaumgartner/Documents/ARI/ARIcloud/SpExCue/Experiments/Matlab_general/eeglab_analysis')
+addpath(eeglab_analysis_scripts)
 
 %% pre-ICA processing
 for ii=1:height(subjects)

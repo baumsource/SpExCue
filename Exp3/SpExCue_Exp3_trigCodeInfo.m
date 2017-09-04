@@ -1,5 +1,5 @@
-function info = SpExCue_Exp3_trigCode(trig)
-% info = SpExCue_Exp3_trigCode(trig)
+function info = SpExCue_Exp3_trigCodeInfo(trig)
+% info = SpExCue_Exp3_trigCodeInfo(trig)
 %
 % binary (logical: 1/0) trigger code: 
 %   (1)   distractor/target, 

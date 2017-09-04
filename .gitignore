@@ -3,6 +3,8 @@
 *.sofa
 *.dat
 *.png
+*.eps
+*.svg
 *.wav
 *.pdf
 *.doc*
@@ -14,3 +16,8 @@
 *.ica*
 *.study
 *.fig
+*.sc
+*.sph
+*.wts
+bias_after_adjust
+*Alias

@@ -3,7 +3,7 @@ clear
 %% Settings
 
 flags.do_blinkICrej = true;
-conditionSet = 'Onset'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCloserVsFarther'
+conditionSet = 'Mchange'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToCloserVsFarther'
 % all: 1
 % grand average: 2
 % additional designs for 'Mchange': 
@@ -11,7 +11,7 @@ conditionSet = 'Onset'; % 'CloserVsFarther' or 'Mchange' or 'Onset','OnsetToClos
 % 8: M1-0vsMi-0, 9: M0-1vsMi-1, 10: M0-ivsM1-i
 % 11: all with D=0 collapsed, 12: Mi-1vsMi-0 (no prior expectation)
 % 13: all except D=0
-design = 1;
+design = 13;
 
 
   
@@ -24,7 +24,7 @@ stats.mcorrect = 'none'; % 'none' or 'MonteCarloCluster'
 plotflag.topo = true;
 plotflag.erp = true;
 plotflag.compAmp = true;
-flags.do_print = true;
+flags.do_print = false;
 
 % ERP evaluation option
 flags.do_ihd = false; % evaluate inter-hemispheric differences in ERPs (right - left
@@ -375,7 +375,7 @@ if flags.do_channels
         end
         
       end
-      
+      compStats{ii} = tbl;
     end
   end
   
@@ -588,14 +588,14 @@ if flags.do_print
 
   set(figComp,'PaperUnits','centimeters','PaperPosition',[100,100,10,10])
   for ii = 1:length(figComp)
-    fn = fullfile(mfilename,[compLabel{ii},conditionSet,'_',STUDY.design(design).name]);
+    fn = fullfile(mfilename,[compLabel{ii},'_',chanLabel{1},'_',conditionSet,'_',STUDY.design(design).name]);
 %     print(figComp(ii),Resolution,'-dpng',fn)
     saveas(figComp(ii),fn)
     saveas(figComp(ii),[fn,'.eps'])
   end
   if plotflag.compAmp
     fn = fullfile(mfilename,['compAmp_',chanLabel{1},'_',conditionSet,'_',STUDY.design(design).name]);
-    save(fn,'compAmp','condLbl')
+    save(fn,'compAmp','condLbl','compStats')
   end
   
 end

@@ -1,5 +1,5 @@
 function IRminPhase = RB_minphase(IR,dim)
-% RB_minphase - create minimum-phase filter by making cepstrum causal
+% RB_minphase - create minimum-phase filter via causal cepstrum
 %
 % Usage: IRminPhase = RB_minphase(IR,dim)
 

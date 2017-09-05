@@ -155,6 +155,8 @@ disp(['Channel(s) of interest: ', chanSel])
 %% ERPs
 STUDY = pop_erpparams(STUDY, 'plotconditions', 'together',...
       'timerange',[-600,1000],'averagechan','on','topotime',[]);
+ColorOrder = 0.8*eye(3); 
+ColorOrder2=ColorOrder(ceil((1:6)/2),:);
 subsel = [subjects.name;{''}];
 for ss=1:length(subsel)
   [STUDY,erpdata,erptimes,~,pcond] = std_erpplot(STUDY,ALLEEG,'channels',chanSel,'subject',subsel{ss});
@@ -175,12 +177,11 @@ for ss=1:length(subsel)
     plot(compWin{ii}(2)*[1,1],ylim,'k:')
   end
 
-  ColorOrder = eye(3); ColorOrder=ColorOrder(ceil((1:6)/2),:);
   LineStyleOrder = repmat({'-','--'},1,3);
   chil = get(gca,'Children');
   chil = chil(end:-1:end-5);
   for ichil = 1:length(chil)
-    set(chil(ichil),'Color',ColorOrder(ichil,:),'LineStyle',LineStyleOrder{ichil})
+    set(chil(ichil),'Color',ColorOrder2(ichil,:),'LineStyle',LineStyleOrder{ichil})
   end
   if isempty(subsel{ss})
     saveas(gcf,'SpExCue_Exp3_ERPwaveform_2ndSyl_avg')
@@ -190,9 +191,14 @@ for ss=1:length(subsel)
 end
 
 %% Diff wave
+[STUDY,erpdata,erptimes] = std_erpplot(STUDY,ALLEEG,'channels',chanSel,'noplot','on');
 figure
 differpdata = cat(3,erpdata{1:2:end}) - cat(3,erpdata{2:2:end});
-plot(erptimes,squeeze(mean(differpdata,2)))
+avgdifferpdata = squeeze(mean(differpdata,2));
+for ii = 1:3
+  plot(erptimes,avgdifferpdata(:,ii),'Color',ColorOrder(ii,:))
+  hold on
+end
 xlabel('Time (ms)')
 ylabel([chanSel{:},' difference potential (µV)'])
 legend(STUDY.condition{1:2:end})

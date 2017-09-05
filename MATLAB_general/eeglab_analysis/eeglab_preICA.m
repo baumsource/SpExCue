@@ -24,7 +24,7 @@ if not(exist([fn,'_raw.set'],'file'))
 
   %% Remove unused channels
   EEG = pop_select(EEG,'nochannel',{'EXG8'});
-  EEG = pop_chanedit(EEG, 'load',{[cnfg.dirLOCS, cnfg.nChansLocsFilename] 'filetype' 'autodetect'},...  % Set channel locations
+  EEG = pop_chanedit(EEG, 'load',{fullfile(cnfg.dirLOCS, cnfg.nChansLocsFilename) 'filetype' 'autodetect'},...  % Set channel locations
     'setref',{[num2str(cnfg.refChanNum(1)),' ',num2str(cnfg.refChanNum(2))] cnfg.refChanLabel});             % and define reference channels
   % check if bad channels marked during recording
   if exist([fn,'_badchan.mat'],'file')

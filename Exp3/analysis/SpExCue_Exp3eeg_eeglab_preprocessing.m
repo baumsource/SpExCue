@@ -14,9 +14,9 @@ cnfg.refChanLabel = 'A1 A2';%'TP9 TP10'; % Labels of reference channels
 cnfg.eyeChanNum = 35:37;
 cnfg.eegChanNum = 1:32;
 
-cnfg.FS = 500;  % In samps/sec
-cnfg.locutoff = 0.5;  % In Hz
-cnfg.hicutoff = 20;  % In Hz
+cnfg.FS = 256;  % In samps/sec
+cnfg.locutoff = 0.3;  % In Hz
+cnfg.hicutoff = 50;  % In Hz
 cnfg.transitionBandwidth = 1;  % In Hz
 cnfg.maxPassbandRipple = 0.0002;  % The default value used when calling 'pop_firwsord.m' GUI is 0.0002
 cnfg.baselineRange = [-100,0];%[-500,0]; % baseline time range in ms
@@ -47,7 +47,7 @@ tmp = load('SpExCue_Exp3eeg_subjects.mat');
 subjects = tmp.subject;
 
 % Select subjects as required
-subjects = subjects(5,:); disp(['only ',subjects.name])
+% subjects = subjects(5,:); disp(['only ',subjects.name])
 
 %% Add paths
 if not(exist('eeglab','file'))

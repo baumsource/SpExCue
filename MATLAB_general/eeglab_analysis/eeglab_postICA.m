@@ -73,8 +73,8 @@ else
 end
 fnsave = fullfile(pathstr,[EEGfnClean,'.set']);
 EEG = pop_saveset(EEG,  'filename', fnsave);
-% paramsOut = ICA.paramsOut;
-% save(fullfile(filepath,ICAfn),'paramsOut')
+paramsOut = ICA.paramsOut;
+save(fullfile(filepath,ICAfn),'paramsOut')
 
 % close all
 

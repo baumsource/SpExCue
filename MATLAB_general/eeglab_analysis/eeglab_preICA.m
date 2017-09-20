@@ -21,6 +21,9 @@ if not(exist([fn,'_raw.set'],'file'))
   for ii = 1:length(eventList)
     EEG.event(ii).type = eventList(ii);
   end
+  if strcmp(fn(end-2:end),'S27')
+    EEG = fixEventsS27(EEG);
+  end
 
   %% Remove unused channels
   EEG = pop_select(EEG,'nochannel',{'EXG8'});
@@ -37,9 +40,6 @@ else
   EEG = pop_loadset('filename', [fn,'_raw.set']);
 end
 
-if strcmp(fn(end-2:end),'S27')
-  EEG = fixEventsS27(EEG);
-end
 
 %% Global artifact rejection for ICA
 
